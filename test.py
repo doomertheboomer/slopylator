@@ -1,7 +1,7 @@
 class dm6502:
-    def __init__(self, loglevel = 5):
+    def __init__(self, loglevel = 3):
         self.loglevel = loglevel
-        self.loglevels = ["[fatal]", "[error]", "[warning]", "[information]", "[debug]", "[trace]"]
+        self.loglevels = ["[fatal]", "[error]", "[warn] ", "[info] ", "[debug]", "[trace]"]
         
         # general purpose registers
         self.a = 0  # accumulator
@@ -33,17 +33,16 @@ class dm6502:
             0x7D: [self.__adc7D, 3, 4, 1],
             0x79: [self.__adc79, 3, 4, 1],
             0x61: [self.__adc61, 2, 6, 0],
-            # 0x71: [self.__adc71, 2, 5, 1],
+            0x71: [self.__adc71, 2, 5, 1],
             0xEA: [self.__nop,   1, 2, 0]
         }
         
-        self.log("6502 CPU initialized")
+        self.log("6502 CPU initialized", 3)
         pass
     
     def log(self, str, level = 5):
-        # TODO: proper debug print impl
-        print(str)
-        pass
+        if (self.loglevel <= level):
+            print(self.loglevels[level], str)
     
     def decodeExecute(self, opcode, params):
         # execute the opcode
@@ -51,8 +50,7 @@ class dm6502:
             self.__opcodes[opcode][0](params)
             # TODO: cycle handling
         else:
-            self.log("Illegal instruction!")
-        pass
+            self.log(f"Illegal instruction! {hex(opcode)} {len(params)}", 2)
     
     def srFlagSet(self, flag, enable):
         # TODO: suggestion from friend to use enums instead
@@ -66,29 +64,31 @@ class dm6502:
             else:
                 self.sr &= ~mask
         else:
-            self.log("Bad status register flag!")
+            self.log("Bad status register flag!", 2)
         pass
     
     # TODO: addressing boilerplate
     
     # ADC: Add Memory to Accumulator with Carry
     def __adc(self, amount):
+        self.log(f"adc {amount}", 5)
+        orig_a = self.a
         self.a += amount
     
         # set c flag and correct value
-        if self.a > 255:
-            self.srFlagSet('c', True)
-            self.a &= 0xFF
-        else:
-            self.srFlagSet('c', False)
+        self.srFlagSet('c', self.a > 255)
+        self.a &= 0xFF
     
         # set n flag
         self.srFlagSet('n', bool((self.a >> 7) & 1))
         
         # set z flag
-        self.srFlagSet('z', int(self.a == 0))
+        self.srFlagSet('z', self.a == 0)
     
         # set v flag
+        v = ((orig_a ^ self.a) & (amount ^ self.a) & 0x80) != 0
+        self.srFlagSet('v', v)
+
     
     # immediate addressing
     def __adc69(self, params):
@@ -133,9 +133,9 @@ class dm6502:
         
     # NOP: No Operation
     def __nop(self, params):
-        self.log("nop")
+        self.log("nop", 5)
         pass
     
     
-cpu = dm6502()
-cpu.decodeExecute(0xEA, [])
+cpu = dm6502(2)
+cpu.decodeExecute(0x6D, [1,22])
