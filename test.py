@@ -86,6 +86,12 @@ class dm6502:
         else:
             self.log(f"Illegal instruction! {hex(opcode)} {len(params)}", 2)
     
+    def toSign8(self, val):
+        sign = (val >> 7) & 1
+        if sign == 0:
+            return val & 0xFF
+        return (((~val) & 0b01111111) + 1) * -1
+        
     def srFlagSet(self, flag, enable):
         # TODO: suggestion from friend to use enums instead
         # 7 6 5 4 3 2 1 0
@@ -296,7 +302,7 @@ class dm6502:
     def __asl1E(self, params):
         address = self.__getAbsoluteXAddress(params)
         self.__asl(address)
-        
+    
     # BCC: Branch on Carry Clear
     def __bcc(self, params):
         # TODO: make branches signed
