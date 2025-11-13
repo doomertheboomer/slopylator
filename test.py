@@ -9,7 +9,7 @@ class dm6502:
         self.y = 0  # y register
         # special registers
         self.pc = 0 # program counter
-        self.sp = 0 # stack pointer
+        self.sp = 0xFF # stack pointer
         self.sr = 0 # status register
         self.__srFlags = {
             'n': 7,
@@ -55,9 +55,14 @@ class dm6502:
             0xB0: [self.__bcs,   2, 2, 2],
             0xF0: [self.__beq,   2, 2, 2],
             
-            0x24: [self.__bit24, 2, 2, 2],
-            0x2C: [self.__bit2C, 2, 2, 2],
+            0x24: [self.__bit24, 2, 3, 0],
+            0x2C: [self.__bit2C, 3, 4, 0],
 
+            0x30: [self.__bmi,   2, 2, 2],
+            0xD0: [self.__bne,   2, 2, 2],
+            0x10: [self.__bpl,   2, 2, 2],
+            
+            0x00: [self.__brk,   1, 7, 0],
 
             0xEA: [self.__nop,   1, 2, 0]
             
@@ -103,6 +108,18 @@ class dm6502:
         else:
             self.log("Bad status register flag!", 2)
             return 0
+        
+    def stackPush(self, val):
+        val &= 0xFF
+        self.memory[self.sp + 0x100] = val # stack is on page 1
+        self.sp -= 1
+        self.sp &= 0xFF
+    
+    def stackPull(self):
+        retVal = self.memory[self.sp + 0x100]
+        self.sp += 1
+        self.sp &= 0xFF
+        return retVal
     
     # addressing boilerplate
     # immediate - no need because it's in the params
@@ -184,13 +201,13 @@ class dm6502:
     # indirect x
     def __adc61(self, params):
         # val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)
-        address = self.__getIndirectXAddress(params)     
+        address = self.__getIndirectXAddress(params)
         self.__adc(self.memory[address])
 
     # indirect y
     def __adc71(self, params):
         # val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)
-        address = self.__getIndirectYAddress(params)     
+        address = self.__getIndirectYAddress(params)
         self.__adc(self.memory[address])
     
     # AND: AND Memory with Accumulator
@@ -282,27 +299,32 @@ class dm6502:
         
     # BCC: Branch on Carry Clear
     def __bcc(self, params):
-        self.log(f"bcc {params[0]}")
+        # TODO: make branches signed
+        self.log(f"bcc {params[0]}", 5)
         if self.srFlagGet('c') == False:
-            self.pc += (params[0] - 2) # function size will be added to pc after exec
+            self.pc += (params[0]) # function size will be added to pc after exec
     
     # BCS: Branch on Carry Set
     def __bcs(self, params):
-        self.log(f"bcs {params[0]}")
+        # TODO: make branches signed
+        self.log(f"bcs {params[0]}", 5)
         if self.srFlagGet('c'):
-            self.pc += (params[0] - 2) # function size will be added to pc after exec
+            self.pc += (params[0]) # function size will be added to pc after exec
             
     # BEQ: Branch on Result Zero
     def __beq(self, params):
-        self.log(f"beq {params[0]}")
+        # TODO: make branches signed
+        self.log(f"beq {params[0]}", 5)
         if self.srFlagGet('z'):
-            self.pc += (params[0] - 2) # function size will be added to pc after exec
+            self.pc += (params[0]) # function size will be added to pc after exec
             
     # BIT: Test Bits in Memory with Accumulator
     # zero page
     def __bit24(self, params):
         address = self.__getZeroPageAddress(params)
         result = self.a & self.memory[address]
+        self.log(f"bit {result}", 5)
+
         
         # set bits
         self.srFlagSet('z', result == 0)
@@ -312,12 +334,53 @@ class dm6502:
     def __bit2C(self, params):
         address = self.__getAbsoluteAddress(params)
         result = self.a & self.memory[address]
-        
+        self.log(f"bit {result}", 5)
+
         # set bits
         self.srFlagSet('z', result == 0)
         self.srFlagSet('v', bool((self.memory[address] >> 6) & 1))
         self.srFlagSet('n', bool((self.memory[address] >> 7) & 1))
         
+    # BMI: Branch on Result Minus
+    def __bmi(self, params):
+        # TODO: make branches signed
+        self.log(f"bmi {params[0]}", 5)
+        if self.srFlagGet('n'):
+            self.pc += (params[0]) # function size will be added to pc after exec
+    
+    # BNE: Branch on Result Not Zero
+    def __bne(self, params):
+        # TODO: make branches signed
+        self.log(f"bne {params[0]}", 5)
+        if self.srFlagGet('z') == False:
+            self.pc += (params[0]) # function size will be added to pc after exec
+    
+    # BPL: Branch on Result Zero
+    def __bpl(self, params):
+        # TODO: make branches signed
+        self.log(f"bpl {params[0]}", 5)
+        if self.srFlagGet('n') == False:
+            self.pc += (params[0]) # function size will be added to pc after exec
+    
+    # BRK: Force Break
+    def __brk(self, params):
+        # push ret ptr to stack
+        hibyte = (self.pc >> 8) & 0xFF
+        lobyte = self.pc & 0xFF
+        
+        # push flags (with 2 bits always set to 1) to stack
+        flagPush = self.sr | 0b00110000
+        
+        self.stackPush(hibyte)
+        self.stackPush(lobyte)
+        self.stackPush(flagPush)
+        
+        # set i flag according to nesdev
+        self.srFlagSet('i', 1)
+        
+        # set pc to interrupt handler
+        self.pc = 0xFFFD # supposed to be FFFE but code will add 1 to pc after
+    
     # NOP: No Operation
     def __nop(self, params):
         self.log("nop", 5)
