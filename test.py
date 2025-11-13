@@ -54,6 +54,10 @@ class dm6502:
             0x90: [self.__bcc,   2, 2, 2],
             0xB0: [self.__bcs,   2, 2, 2],
             0xF0: [self.__beq,   2, 2, 2],
+            
+            0x24: [self.__bit24, 2, 2, 2],
+            0x2C: [self.__bit2C, 2, 2, 2],
+
 
             0xEA: [self.__nop,   1, 2, 0]
             
@@ -294,6 +298,26 @@ class dm6502:
         if self.srFlagGet('z'):
             self.pc += (params[0] - 2) # function size will be added to pc after exec
             
+    # BIT: Test Bits in Memory with Accumulator
+    # zero page
+    def __bit24(self, params):
+        address = self.__getZeroPageAddress(params)
+        result = self.a & self.memory[address]
+        
+        # set bits
+        self.srFlagSet('z', result == 0)
+        self.srFlagSet('v', bool((self.memory[address] >> 6) & 1))
+        self.srFlagSet('n', bool((self.memory[address] >> 7) & 1))
+        
+    def __bit2C(self, params):
+        address = self.__getAbsoluteAddress(params)
+        result = self.a & self.memory[address]
+        
+        # set bits
+        self.srFlagSet('z', result == 0)
+        self.srFlagSet('v', bool((self.memory[address] >> 6) & 1))
+        self.srFlagSet('n', bool((self.memory[address] >> 7) & 1))
+        
     # NOP: No Operation
     def __nop(self, params):
         self.log("nop", 5)
