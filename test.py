@@ -50,6 +50,10 @@ class dm6502:
             0x16: [self.__asl16, 2, 6, 0],
             0x0E: [self.__asl0E, 3, 6, 0],
             0x1E: [self.__asl1E, 3, 7, 0],
+            
+            0x90: [self.__bcc,   2, 2, 2],
+            0xB0: [self.__bcs,   2, 2, 2],
+            0xF0: [self.__beq,   2, 2, 2],
 
             0xEA: [self.__nop,   1, 2, 0]
             
@@ -58,21 +62,23 @@ class dm6502:
         self.log("6502 CPU initialized", 3)
         pass
     
-    def log(self, str, level = 5):
+    def log(self, *args):
+        level = args[-1]
+        va_list = args[0:-1]
         if (self.loglevel <= level):
-            print(self.loglevels[level], str)
+            print("[cpu]",self.loglevels[level], *va_list)
     
     def decodeExecute(self, opcode, params):
         # execute the opcode
         if (opcode in self.__opcodes) and (len(params) == self.__opcodes[opcode][1] - 1): # params len is subtracted by 1
             self.__opcodes[opcode][0](params)
+            self.pc += self.__opcodes[opcode][1]
             # TODO: cycle handling
         else:
             self.log(f"Illegal instruction! {hex(opcode)} {len(params)}", 2)
     
     def srFlagSet(self, flag, enable):
         # TODO: suggestion from friend to use enums instead
-        flag = flag.lower()
         # 7 6 5 4 3 2 1 0
         # N V x B D I Z C
         if flag[0] in self.__srFlags:
@@ -83,10 +89,21 @@ class dm6502:
                 self.sr &= ~mask
         else:
             self.log("Bad status register flag!", 2)
-        pass
+    
+    def srFlagGet(self, flag):
+        # TODO: suggestion from friend to use enums instead
+        # 7 6 5 4 3 2 1 0
+        # N V x B D I Z C
+        if flag[0] in self.__srFlags:
+            return bool((self.sr >> self.__srFlags[flag[0]]) & 1)
+        else:
+            self.log("Bad status register flag!", 2)
+            return 0
     
     # addressing boilerplate
     # immediate - no need because it's in the params
+    # accumulator - no need because it's a register
+    # relative - no need because it's in the params
     # zeropage
     def __getZeroPageAddress(self, param):
         return param[0] # kinda redundant but guess i'll include it here
@@ -259,6 +276,24 @@ class dm6502:
         address = self.__getAbsoluteXAddress(params)
         self.__asl(address)
         
+    # BCC: Branch on Carry Clear
+    def __bcc(self, params):
+        self.log(f"bcc {params[0]}")
+        if self.srFlagGet('c') == False:
+            self.pc += (params[0] - 2) # function size will be added to pc after exec
+    
+    # BCS: Branch on Carry Set
+    def __bcs(self, params):
+        self.log(f"bcs {params[0]}")
+        if self.srFlagGet('c'):
+            self.pc += (params[0] - 2) # function size will be added to pc after exec
+            
+    # BEQ: Branch on Result Zero
+    def __beq(self, params):
+        self.log(f"beq {params[0]}")
+        if self.srFlagGet('z'):
+            self.pc += (params[0] - 2) # function size will be added to pc after exec
+            
     # NOP: No Operation
     def __nop(self, params):
         self.log("nop", 5)
