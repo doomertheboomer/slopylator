@@ -67,7 +67,31 @@ class dm6502:
             self.log("Bad status register flag!", 2)
         pass
     
-    # TODO: addressing boilerplate
+    # addressing boilerplate
+    # immediate - no need because it's in the params
+    # zeropage
+    def __getZeroPageAddress(self, param):
+        return param # kinda redundant but guess i'll include it here
+    # zeropage x
+    def __getZeroPageXAddress(self, param):
+        return (param + self.x) & 0xFF
+    # absolute
+    def __getAbsoluteAddress(self, param):
+        return (param[1] << 8) | param[0]
+    # absolute x
+    def __getAbsoluteXAddress(self, param):
+        return (((param[1] << 8) | param[0]) + self.x) & 0xFFFF # no idea if i should & that or not
+    # absolute y
+    def __getAbsoluteYAddress(self, param):
+        return (((param[1] << 8) | param[0]) + self.y) & 0xFFFF # no idea if i should & that or not
+    # indirect x
+    def __getIndirectXAddress(self, param):
+        # val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)
+        return self.memory[(param[0] + self.x) & 0xFF] + self.memory[(param[0] + self.x + 1) & 0xFF] * 0x100
+    # indirect y
+    def __getIndirectYAddress(self, param):
+        # val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)
+        return self.memory[param[0]] + self.memory[(param[0] + 1) & 0xFF] * 0x100 + self.y
     
     # ADC: Add Memory to Accumulator with Carry
     def __adc(self, amount):
@@ -93,48 +117,47 @@ class dm6502:
     # immediate addressing
     def __adc69(self, params):
         self.__adc(params[0])
-        pass
     
     # zeropage
     def __adc65(self, params):
-        self.__adc(self.memory[params[0]])
+        address = self.__getZeroPageAddress(params[0])
+        self.__adc(self.memory[address])
         
     # zeropage x
     def __adc75(self, params):
-        address = (params[0] + self.x) & 0xFF
+        address = self.__getZeroPageXAddress(params[0])
         self.__adc(self.memory[address])
         
     # absolute
     def __adc6D(self, params):
-        address = (params[1] << 8) | params[0]
+        address = self.__getAbsoluteAddress(params)
         self.__adc(self.memory[address])
         
     # absolute x
     def __adc7D(self, params):
-        address = (((params[1] << 8) | params[0]) + self.x) & 0xFFFF # no idea if i should & that or not
+        address = self.__getAbsoluteXAddress(params)
         self.__adc(self.memory[address])
     
     # absolute y
     def __adc79(self, params):
-        address = (((params[1] << 8) | params[0]) + self.y) & 0xFFFF # no idea if i should & that or not
+        address = self.__getAbsoluteYAddress(params)
         self.__adc(self.memory[address])
     
     # indirect x
     def __adc61(self, params):
         # val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)
-        address = self.memory[(params[0] + self.x) & 0xFF] + self.memory[(params[0] + self.x + 1) & 0xFF] * 0x100        
+        address = self.__getIndirectXAddress(params)     
         self.__adc(self.memory[address])
         
     # indirect y
     def __adc71(self, params):
         # val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)
-        address = self.memory[params[0]] + self.memory[(params[0] + 1) & 0xFF] * 0x100 + self.y
+        address = self.__getIndirectYAddress(params)     
         self.__adc(self.memory[address])
         
     # NOP: No Operation
     def __nop(self, params):
         self.log("nop", 5)
-        pass
     
     
 cpu = dm6502(2)
