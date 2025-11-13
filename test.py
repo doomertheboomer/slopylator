@@ -221,33 +221,43 @@ class dm6502:
         self.__and(self.memory[address])
     
     # ASL: Shift Left One Bit (Memory or Accumulator)
-    # TODO: set status register flags
     def __asl(self, address):
+        old = self.memory[address]
+        self.memory[address] = self.memory[address] << 1
+        # set status flags
+        self.srFlagSet('c', bool((old >> 7) & 1))
+        self.srFlagSet('n', bool((self.memory[address] >> 7) & 1))
+        self.srFlagSet('z', self.memory[address] == 0)
         pass
     
     # accumulator
     def __asl0A(self, params):
+        old = self.a
         self.a = self.a << 1
+        # set status flags
+        self.srFlagSet('c', bool((old >> 7) & 1))
+        self.srFlagSet('n', bool((self.a >> 7) & 1))
+        self.srFlagSet('z', self.a == 0)
         
     # zeropage
     def __asl06(self, params):
         address = self.__getZeroPageAddress(params)
-        self.memory[address] = self.memory[address] << 1
+        self.__asl(address)
     
     # zeropage x
     def __asl16(self, params):
         address = self.__getZeroPageXAddress(params)
-        self.memory[address] = self.memory[address] << 1
+        self.__asl(address)
 
     # absolute
     def __asl0E(self, params):
         address = self.__getAbsoluteAddress(params)
-        self.memory[address] = self.memory[address] << 1
+        self.__asl(address)
     
     # absolute x
     def __asl1E(self, params):
         address = self.__getAbsoluteXAddress(params)
-        self.memory[address] = self.memory[address] << 1
+        self.__asl(address)
         
     # NOP: No Operation
     def __nop(self, params):
