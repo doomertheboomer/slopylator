@@ -26,6 +26,7 @@ class dm6502:
         # master list of all opcodes
         # opcode: [func, size (including first byte), cycles, stars]
         self.__opcodes = {
+            
             0x69: [self.__adc69, 2, 2, 0],
             0x65: [self.__adc65, 2, 3, 0],
             0x75: [self.__adc75, 2, 4, 0],
@@ -34,7 +35,18 @@ class dm6502:
             0x79: [self.__adc79, 3, 4, 1],
             0x61: [self.__adc61, 2, 6, 0],
             0x71: [self.__adc71, 2, 5, 1],
+            
+            0x29: [self.__and29, 2, 2, 0],
+            0x25: [self.__and25, 2, 3, 0],
+            0x35: [self.__and35, 2, 4, 0],
+            0x2D: [self.__and2D, 3, 4, 0],
+            0x3D: [self.__and3D, 3, 4, 1],
+            0x39: [self.__and39, 3, 4, 1],
+            0x21: [self.__and21, 2, 6, 0],
+            0x31: [self.__and31, 2, 5, 1],
+
             0xEA: [self.__nop,   1, 2, 0]
+            
         }
         
         self.log("6502 CPU initialized", 3)
@@ -71,10 +83,10 @@ class dm6502:
     # immediate - no need because it's in the params
     # zeropage
     def __getZeroPageAddress(self, param):
-        return param # kinda redundant but guess i'll include it here
+        return param[0] # kinda redundant but guess i'll include it here
     # zeropage x
     def __getZeroPageXAddress(self, param):
-        return (param + self.x) & 0xFF
+        return (param[0] + self.x) & 0xFF
     # absolute
     def __getAbsoluteAddress(self, param):
         return (param[1] << 8) | param[0]
@@ -112,7 +124,6 @@ class dm6502:
         # set v flag
         v = ((orig_a ^ self.a) & (amount ^ self.a) & 0x80) != 0
         self.srFlagSet('v', v)
-
     
     # immediate addressing
     def __adc69(self, params):
@@ -120,14 +131,14 @@ class dm6502:
     
     # zeropage
     def __adc65(self, params):
-        address = self.__getZeroPageAddress(params[0])
+        address = self.__getZeroPageAddress(params)
         self.__adc(self.memory[address])
-        
+    
     # zeropage x
     def __adc75(self, params):
-        address = self.__getZeroPageXAddress(params[0])
+        address = self.__getZeroPageXAddress(params)
         self.__adc(self.memory[address])
-        
+    
     # absolute
     def __adc6D(self, params):
         address = self.__getAbsoluteAddress(params)
@@ -137,7 +148,7 @@ class dm6502:
     def __adc7D(self, params):
         address = self.__getAbsoluteXAddress(params)
         self.__adc(self.memory[address])
-    
+
     # absolute y
     def __adc79(self, params):
         address = self.__getAbsoluteYAddress(params)
@@ -148,17 +159,65 @@ class dm6502:
         # val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)
         address = self.__getIndirectXAddress(params)     
         self.__adc(self.memory[address])
-        
+
     # indirect y
     def __adc71(self, params):
         # val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)
         address = self.__getIndirectYAddress(params)     
         self.__adc(self.memory[address])
+    
+    # AND: AND Memory with Accumulator
+    def __and(self, value):
+        self.log(f"and {value}", 5)
+        self.a = self.a & value
         
+        # set n and z flag
+        self.srFlagSet('n', bool((self.a >> 7) & 1))
+        self.srFlagSet('z', self.a == 0)
+    
+    # immediate
+    def __and29(self, params):
+        self.__and(params[0])
+    
+    # zeropage
+    def __and25(self, params):
+        address = self.__getZeroPageAddress(params)
+        self.__and(self.memory[address])
+
+    # zeropage x
+    def __and35(self, params):
+        address = self.__getZeroPageXAddress(params)
+        self.__and(self.memory[address])
+    
+    # absolute
+    def __and2D(self, params):
+        address = self.__getAbsoluteAddress(params)
+        self.__and(self.memory[address])
+    
+    # absolute x
+    def __and3D(self, params):
+        address = self.__getAbsoluteXAddress(params)
+        self.__and(self.memory[address])
+
+    # absolute y
+    def __and39(self, params):
+        address = self.__getAbsoluteYAddress(params)
+        self.__and(self.memory[address])
+    
+    # indirect x
+    def __and21(self, params):
+        address = self.__getIndirectXAddress(params)
+        self.__and(self.memory[address])
+    
+    # indirect y
+    def __and31(self, params):
+        address = self.__getIndirectYAddress(params)
+        self.__and(self.memory[address])
+    
     # NOP: No Operation
     def __nop(self, params):
         self.log("nop", 5)
     
     
-cpu = dm6502(2)
-cpu.decodeExecute(0x6D, [1,22])
+cpu = dm6502(0)
+cpu.decodeExecute(0x31, [1])
