@@ -663,7 +663,7 @@ class dm6502:
         self.__inc(address)
     
     # INX: Increment Index X by One
-    def __dex(self, params):
+    def __inx(self, params):
         self.log(f"inx", 5)
         self.x += 1
         self.x &= 0xFF
@@ -672,7 +672,7 @@ class dm6502:
         self.srFlagSet('n', bool((self.x >> 7) & 1))
 
     # INY: Increment Index Y by One
-    def __dey(self, params):
+    def __iny(self, params):
         self.log(f"iny", 5)
         self.y += 1
         self.y &= 0xFF
