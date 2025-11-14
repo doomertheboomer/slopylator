@@ -66,6 +66,20 @@ class dm6502:
             
             0x50: [self.__bvc,   2, 2, 2],
             0x70: [self.__bvs,   2, 2, 2],
+            
+            0x18: [self.__clc,   1, 2, 0],
+            0xD8: [self.__cld,   1, 2, 0],
+            0x58: [self.__cli,   1, 2, 0],
+            0xB8: [self.__clv,   1, 2, 0],
+            
+            0xC9: [self.__cmpC9, 2, 2, 0],
+            0xC5: [self.__cmpC5, 2, 3, 0],
+            0xD5: [self.__cmpD5, 2, 4, 0],
+            0xCD: [self.__cmpCD, 3, 4, 0],
+            0xDD: [self.__cmpDD, 3, 4, 1],
+            0xD9: [self.__cmpD9, 3, 4, 1],
+            0xC1: [self.__cmpC1, 2, 6, 0],
+            0xD1: [self.__cmpD1, 2, 5, 1],
 
             0xEA: [self.__nop,   1, 2, 0]
             
@@ -386,16 +400,80 @@ class dm6502:
     
     # BVC: Branch on Overflow Clear
     def __bvc(self, params):
-        self.log(f"bpl {params[0]}", 5)
+        self.log(f"bvc {params[0]}", 5)
         if self.srFlagGet('v') == False:
             self.pc += self.toSign8(params[0]) # function size will be added to pc after exec
             
     # BVS: Branch on Overflow Set
     def __bvs(self, params):
-        self.log(f"bpl {params[0]}", 5)
+        self.log(f"bvs {params[0]}", 5)
         if self.srFlagGet('v'):
             self.pc += self.toSign8(params[0]) # function size will be added to pc after exec
 
+    # CLC: Clear Carry Flag
+    def __clc(self, params):
+        self.srFlagSet('c', False)
+    
+    # CLD: Clear Decimal Mode
+    def __cld(self, params):
+        self.srFlagSet('d', False)
+    
+    # CLI: Clear Interrupt Disable Bit
+    def __cli(self, params):
+        self.srFlagSet('i', False)
+    
+    # CLV: Clear Overflow Flag
+    def __clv(self, params):
+        self.srFlagSet('v', False)
+        
+    # CMP: Compare Memory with Accumulator
+    def __cmp(self, memory):
+        self.log(f"cmp {memory}", 5)
+        result = (self.a - memory) & 0xFF # no idea if this should wraparound or not
+        # set flags
+        self.srFlagSet('c', self.a >= self.memory)
+        self.srFlagSet('z', self.a == memory)
+        self.srFlagSet('n', bool((result >> 7) & 1))
+    
+    # immediate
+    def __cmpC9(self, params):
+        self.__cmp(params[0])
+        
+    # zeropage
+    def __cmpC5(self, params):
+        address = self.__getZeroPageAddress(params)
+        self.__cmp(self.memory[address])
+    
+    # zeropage x
+    def __cmpD5(self, params):
+        address = self.__getZeroPageXAddress(params)
+        self.__cmp(self.memory[address])
+        
+    # absolute
+    def __cmpCD(self, params):
+        address = self.__getAbsoluteAddress(params)
+        self.__cmp(self.memory[address])
+        
+    # absolute x
+    def __cmpDD(self, params):
+        address = self.__getAbsoluteXAddress(params)
+        self.__cmp(self.memory[address])
+        
+    # absolute y
+    def __cmpD9(self, params):
+        address = self.__getAbsoluteYAddress(params)
+        self.__cmp(self.memory[address])
+    
+    # indirect x
+    def __cmpC1(self, params):
+        address = self.__getIndirectXAddress(params)
+        self.__cmp(self.memory[address])
+    
+    # indirect y
+    def __cmpD1(self, params):
+        address = self.__getIndirectYAddress(params)
+        self.__cmp(self.memory[address])
+    
     # NOP: No Operation
     def __nop(self, params):
         self.log("nop", 5)
