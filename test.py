@@ -80,6 +80,14 @@ class dm6502:
             0xD9: [self.__cmpD9, 3, 4, 1],
             0xC1: [self.__cmpC1, 2, 6, 0],
             0xD1: [self.__cmpD1, 2, 5, 1],
+            
+            0xE0: [self.__cpxE0, 2, 2, 0],
+            0xE4: [self.__cpxE4, 2, 3, 0],
+            0xEC: [self.__cpxEC, 3, 4, 0],
+
+            0xC0: [self.__cpyC0, 2, 2, 0],
+            0xC4: [self.__cpyC4, 2, 3, 0],
+            0xCC: [self.__cpyCC, 3, 4, 0],
 
             0xEA: [self.__nop,   1, 2, 0]
             
@@ -427,9 +435,12 @@ class dm6502:
         self.srFlagSet('v', False)
         
     # CMP: Compare Memory with Accumulator
-    def __cmp(self, memory):
+    def __cmp(self, memory, register = 0):
         self.log(f"cmp {memory}", 5)
-        result = (self.a - memory) & 0xFF # no idea if this should wraparound or not
+        # for other cmps
+        if (register == 0):
+            register = self.a
+        result = (register - memory) & 0xFF # no idea if this should wraparound or not
         # set flags
         self.srFlagSet('c', self.a >= self.memory)
         self.srFlagSet('z', self.a == memory)
@@ -473,6 +484,36 @@ class dm6502:
     def __cmpD1(self, params):
         address = self.__getIndirectYAddress(params)
         self.__cmp(self.memory[address])
+    
+    # CPX: Compare Memory and Index X
+    # immediate
+    def __cpxE0(self, params):
+        self.__cmp(params[0], self.x)
+    
+    # zeropage
+    def __cpxE4(self, params):
+        address = self.__getZeroPageAddress(params)
+        self.__cmp(self.memory[address], self.x)
+    
+    # absolute
+    def __cpxEC(self, params):
+        address = self.__getAbsoluteAddress(params)
+        self.__cmp(self.memory[address], self.x)
+    
+    # CPX: Compare Memory and Index Y
+    # immediate
+    def __cpyC0(self, params):
+        self.__cmp(params[0], self.y)
+    
+    # zeropage
+    def __cpyC4(self, params):
+        address = self.__getZeroPageAddress(params)
+        self.__cmp(self.memory[address], self.y)
+    
+    # absolute
+    def __cpyCC(self, params):
+        address = self.__getAbsoluteAddress(params)
+        self.__cmp(self.memory[address], self.y)
     
     # NOP: No Operation
     def __nop(self, params):
