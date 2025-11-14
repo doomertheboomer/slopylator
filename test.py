@@ -713,11 +713,12 @@ class dm6502:
     def __jsr(self, params):
         self.log(f"jsr {address}")
         address = self.__getAbsoluteAddress(params)
+        # this is pretty much a call, pushes return address to top of stack for later
         ret = self.pc+2
         hibyte = (ret >> 8) & 0xFF
         lobyte = ret & 0xFF
         self.stackPush(hibyte)
-        self.stackPull(lobyte)
+        self.stackPush(lobyte)
         self.pc = address - 3 # function size will be added to pc after exec
         
     # NOP: No Operation
