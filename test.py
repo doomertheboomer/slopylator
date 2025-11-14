@@ -105,6 +105,13 @@ class dm6502:
             0x41: [self.__eor41, 2, 6, 0],
             0x51: [self.__eor51, 2, 5, 1],
             
+            0xE6: [self.__incE6, 2, 5, 0],
+            0xF6: [self.__incF6, 2, 6, 0],
+            0xEE: [self.__incEE, 3, 6, 0],
+            0xFE: [self.__incFE, 3, 7, 0],
+            0xE8: [self.__inx,   1, 2, 0],
+            0xC8: [self.__iny,   1, 2, 0],
+            
             0xEA: [self.__nop,   1, 2, 0]
             
         }
@@ -625,6 +632,53 @@ class dm6502:
     def __eor51(self, params):
         address = self.__getIndirectYAddress(params)
         self.__eor(self.memory[address])
+        
+    # INC: Incrament Memory by One
+    def __inc(self, address):
+        self.log(f"inc {address}", 5)
+        self.memory[address] += 1
+        self.memory[address] &= 0xFF
+        # update flags
+        self.srFlagSet('z', self.memory[address] == 0)
+        self.srFlagSet('n', bool((self.memory[address] >> 7) & 1))
+        
+    # zeropage
+    def __incE6(self, params):
+        address = self.__getZeroPageAddress(params)
+        self.__inc(address)
+        
+    # zeropage x
+    def __incF6(self, params):
+        address = self.__getZeroPageXAddress(params)
+        self.__inc(address)
+        
+    # absolute
+    def __incEE(self, params):
+        address = self.__getAbsoluteAddress(params)
+        self.__inc(address)
+        
+    # absolute x
+    def __incFE(self, params):
+        address = self.__getAbsoluteXAddress(params)
+        self.__inc(address)
+    
+    # INX: Increment Index X by One
+    def __dex(self, params):
+        self.log(f"inx", 5)
+        self.x += 1
+        self.x &= 0xFF
+        # update flags
+        self.srFlagSet('z', self.x == 0)
+        self.srFlagSet('n', bool((self.x >> 7) & 1))
+
+    # INY: Increment Index Y by One
+    def __dey(self, params):
+        self.log(f"iny", 5)
+        self.y += 1
+        self.y &= 0xFF
+        # update flags
+        self.srFlagSet('z', self.y == 0)
+        self.srFlagSet('n', bool((self.y >> 7) & 1))
         
     # NOP: No Operation
     def __nop(self, params):
