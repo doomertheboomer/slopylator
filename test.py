@@ -88,7 +88,23 @@ class dm6502:
             0xC0: [self.__cpyC0, 2, 2, 0],
             0xC4: [self.__cpyC4, 2, 3, 0],
             0xCC: [self.__cpyCC, 3, 4, 0],
-
+            
+            0xC6: [self.__decC6, 2, 5, 0],
+            0xD6: [self.__decD6, 2, 6, 0],
+            0xCE: [self.__decCE, 3, 6, 0],
+            0xDE: [self.__decDE, 3, 7, 0],
+            0xCA: [self.__dex,   1, 2, 0],
+            0x88: [self.__dey,   1, 2, 0],
+            
+            0x49: [self.__eor49, 2, 2, 0],
+            0x45: [self.__eor45, 2, 3, 0],
+            0x55: [self.__eor55, 2, 4, 0],
+            0x4D: [self.__eor4D, 3, 4, 0],
+            0x5D: [self.__eor5D, 3, 4, 1],
+            0x59: [self.__eor59, 3, 4, 1],
+            0x41: [self.__eor41, 2, 6, 0],
+            0x51: [self.__eor51, 2, 5, 1],
+            
             0xEA: [self.__nop,   1, 2, 0]
             
         }
@@ -328,6 +344,7 @@ class dm6502:
         address = self.__getAbsoluteXAddress(params)
         self.__asl(address)
     
+    # TODO: wraparound branches and branch internal func
     # BCC: Branch on Carry Clear
     def __bcc(self, params):
         self.log(f"bcc {params[0]}", 5)
@@ -436,7 +453,7 @@ class dm6502:
         
     # CMP: Compare Memory with Accumulator
     def __cmp(self, memory, register = 0):
-        self.log(f"cmp {memory}", 5)
+        self.log(f"cmp {memory}", 5) # TODO: fix instruction name print for cpx and cpy
         # for other cmps
         if (register == 0):
             register = self.a
@@ -514,11 +531,104 @@ class dm6502:
     def __cpyCC(self, params):
         address = self.__getAbsoluteAddress(params)
         self.__cmp(self.memory[address], self.y)
+        
+    # DEC: Decrement Memory by One
+    def __dec(self, address):
+        self.log(f"dec {address}", 5)
+        self.memory[address] -= 1
+        self.memory[address] &= 0xFF
+        # update flags
+        self.srFlagSet('z', self.memory[address] == 0)
+        self.srFlagSet('n', bool((self.memory[address] >> 7) & 1))
+        
+    # zeropage
+    def __decC6(self, params):
+        address = self.__getZeroPageAddress(params)
+        self.__dec(address)
+        
+    # zeropage x
+    def __decD6(self, params):
+        address = self.__getZeroPageXAddress(params)
+        self.__dec(address)
+        
+    # absolute
+    def __decCE(self, params):
+        address = self.__getAbsoluteAddress(params)
+        self.__dec(address)
+        
+    # absolute x
+    def __decDE(self, params):
+        address = self.__getAbsoluteXAddress(params)
+        self.__dec(address)
     
+    # DEX: Decrement Index X by One
+    def __dex(self, params):
+        self.log(f"dex", 5)
+        self.x -= 1
+        self.x &= 0xFF
+        # update flags
+        self.srFlagSet('z', self.x == 0)
+        self.srFlagSet('n', bool((self.x >> 7) & 1))
+
+    # DEY: Decrement Index Y by One
+    def __dey(self, params):
+        self.log(f"dey", 5)
+        self.y -= 1
+        self.y &= 0xFF
+        # update flags
+        self.srFlagSet('z', self.y == 0)
+        self.srFlagSet('n', bool((self.y >> 7) & 1))
+        
+    # EOR: Exclusive-OR Memory with Accumulator
+    def __eor(self, memory):
+        self.log(f"eor {memory}", 5)
+        self.a ^= memory
+        # set flags
+        self.srFlagSet('z', self.a == 0)
+        self.srFlagSet('n', bool((self.a >> 7) & 1))
+        
+    # immediate
+    def __eor49(self, params):
+        self.__eor(params[0])
+        
+    # zeropage
+    def __eor45(self, params):
+        address = self.__getZeroPageAddress(params)
+        self.__eor(self.memory[address])
+        
+    # zeropage x
+    def __eor55(self, params):
+        address = self.__getZeroPageXAddress(params)
+        self.__eor(self.memory[address])
+        
+    # absolute
+    def __eor4D(self, params):
+        address = self.__getAbsoluteAddress(params)
+        self.__eor(self.memory[address])
+        
+    # absolute x
+    def __eor5D(self, params):
+        address = self.__getAbsoluteXAddress(params)
+        self.__eor(self.memory[address])
+        
+    # absolute y
+    def __eor59(self, params):
+        address = self.__getAbsoluteYAddress(params)
+        self.__eor(self.memory[address])
+        
+    # indirect x
+    def __eor41(self, params):
+        address = self.__getIndirectXAddress(params)
+        self.__eor(self.memory[address])
+        
+    # indirect y
+    def __eor51(self, params):
+        address = self.__getIndirectYAddress(params)
+        self.__eor(self.memory[address])
+        
     # NOP: No Operation
     def __nop(self, params):
         self.log("nop", 5)
-    
     
 cpu = dm6502(0)
 cpu.decodeExecute(0x31, [1])
