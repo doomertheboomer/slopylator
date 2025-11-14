@@ -112,6 +112,11 @@ class dm6502:
             0xE8: [self.__inx,   1, 2, 0],
             0xC8: [self.__iny,   1, 2, 0],
             
+            0x4C: [self.__jmp4C, 3, 3, 0],
+            0x6C: [self.__jmp6C, 3, 5, 0],
+            
+            0x20: [self.__jsr,   3, 6, 0],
+            
             0xEA: [self.__nop,   1, 2, 0]
             
         }
@@ -194,6 +199,15 @@ class dm6502:
     # absolute y
     def __getAbsoluteYAddress(self, param):
         return (((param[1] << 8) | param[0]) + self.y) & 0xFFFF # no idea if i should & that or not
+    # indirect
+    def __getIndirectAddress(self, param):
+        lobyte = param[0] # bb
+        hibyte = param[1] # cc
+        address = (hibyte << 8) | lobyte # ccbb
+        lobyte2 = self.memory[address] # xx
+        hibyte2 = self.memory[(address + 1) & 0xFF] # yy
+        address2 = (hibyte2 << 8) | lobyte2 # yyxx
+        return address2 # set pc to this address for jmp
     # indirect x
     def __getIndirectXAddress(self, param):
         # val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)
@@ -679,6 +693,32 @@ class dm6502:
         # update flags
         self.srFlagSet('z', self.y == 0)
         self.srFlagSet('n', bool((self.y >> 7) & 1))
+        
+    # JMP: Jump to New Location
+    def __jmp(self, address):
+        self.log(f"jmp {address}")
+        self.pc = address - 3 # function size will be added to pc after exec
+    
+    # absolute
+    def __jmp4C(self, params):
+        address = self.__getAbsoluteAddress(params)
+        self.__jmp(address)
+        
+    # indirect
+    def __jmp6C(self, params):
+        address = self.__getIndirectAddress(params)
+        self.__jmp(address)
+        
+    # JSR: Jump to New Location Saving Return Address
+    def __jsr(self, params):
+        self.log(f"jsr {address}")
+        address = self.__getAbsoluteAddress(params)
+        ret = self.pc+2
+        hibyte = (ret >> 8) & 0xFF
+        lobyte = ret & 0xFF
+        self.stackPush(hibyte)
+        self.stackPull(lobyte)
+        self.pc = address - 3 # function size will be added to pc after exec
         
     # NOP: No Operation
     def __nop(self, params):
