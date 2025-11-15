@@ -117,6 +117,15 @@ class dm6502:
             
             0x20: [self.__jsr,   3, 6, 0],
             
+            0xA9: [self.__ldaA9, 2, 2, 0],
+            0xA5: [self.__ldaA5, 2, 3, 0],
+            0xB5: [self.__ldaB5, 2, 4, 0],
+            0xAD: [self.__ldaAD, 3, 4, 0],
+            0xBD: [self.__ldaBD, 3, 4, 1],
+            0xB9: [self.__ldaB9, 3, 4, 1],
+            0xA1: [self.__ldaA1, 2, 6, 0],
+            0xB1: [self.__ldaB1, 2, 5, 1],
+            
             0xEA: [self.__nop,   1, 2, 0]
             
         }
@@ -720,6 +729,54 @@ class dm6502:
         self.stackPush(hibyte)
         self.stackPush(lobyte)
         self.pc = address - 3 # function size will be added to pc after exec
+        
+    # LDA: Load Accumulator with Memory
+    def __lda(self, memory):
+        self.log(f"lda {memory}", 5)
+        self.a = memory
+        # set flags
+        self.srFlagSet('z', memory == 0)
+        self.srFlagSet('n', bool((self.memory >> 7) & 1))
+        
+    # immediate
+    def __ldaA9(self, params):
+        self.__lda(params[0])
+    
+    # zeropage
+    def __ldaA5(self, params):
+        address = self.__getZeroPageAddress(params)
+        self.__lda(self.memory[address])
+    
+    # zeropage x
+    def __ldaB5(self, params):
+        address = self.__getZeroPageXAddress(params)
+        self.__lda(self.memory[address])
+    
+    # absolute
+    def __ldaAD(self, params):
+        address = self.__getAbsoluteAddress(params)
+        self.__lda(self.memory[address])
+        
+    # absolute x
+    def __ldaBD(self, params):
+        address = self.__getAbsoluteXAddress(params)
+        self.__lda(self.memory[address])
+
+    # absolute y
+    def __ldaB9(self, params):
+        address = self.__getAbsoluteYAddress(params)
+        self.__lda(self.memory[address])
+    
+    # indirect x
+    def __ldaA1(self, params):
+        address = self.__getIndirectXAddress(params)
+        self.__lda(self.memory[address])
+
+    # indirect y
+    def __ldaB1(self, params):
+        # val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)
+        address = self.__getIndirectYAddress(params)
+        self.__lda(self.memory[address])
         
     # NOP: No Operation
     def __nop(self, params):
