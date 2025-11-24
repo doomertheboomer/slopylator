@@ -144,6 +144,12 @@ class dm6502:
             0xAC: [self.__ldyAC, 3, 4, 0],
             0xBC: [self.__ldyBC, 3, 4, 1],
             
+            0x4A: [self.__lsr4A, 1, 2, 0],
+            0x46: [self.__lsr46, 2, 5, 0],
+            0x56: [self.__lsr56, 2, 6, 0],
+            0x4E: [self.__lsr4E, 3, 6, 0],
+            0x5E: [self.__lsr5E, 3, 7, 0],
+            
             0xEA: [self.__nop,   1, 2, 0]
             
         }
@@ -850,7 +856,7 @@ class dm6502:
         
     # zeropage x
     def __ldyB4(self, params):
-        address = self.__getZeroPageYXddress(params)
+        address = self.__getZeroPageXAddress(params)
         self.__ldy(self.memory[address])
     
     # absolute
@@ -862,6 +868,46 @@ class dm6502:
     def __ldyBC(self, params):
         address = self.__getAbsoluteXAddress(params)
         self.__ldy(self.memory[address])
+    
+    # LSR: Shift One Bit Right (Memory or Accumulator)
+    def __lsr(self, address):
+        self.log(f"lsr {address}", 5)
+        old = self.memory[address]
+        self.memory[address] = self.memory[address] >> 1
+        # set status flags
+        self.srFlagSet('c', bool(old & 1))
+        self.srFlagSet('n', False)
+        self.srFlagSet('z', self.memory[address] == 0)
+        
+    # accumulator
+    def __lsr4A(self, params):
+        self.log(f"lsr {params}", 5)
+        old = self.a
+        self.a = self.a >> 1
+        # set status flags
+        self.srFlagSet('c', bool(old & 1))
+        self.srFlagSet('n', False)
+        self.srFlagSet('z', self.a == 0)
+        
+    # zeropage
+    def __lsr46(self, params):
+        address = self.__getZeroPageAddress(params)
+        self.__lsr(address)
+        
+    # zeropage x
+    def __lsr56(self, params):
+        address = self.__getZeroPageXAddress(params)
+        self.__lsr(address)
+    
+    # absolute
+    def __lsr4E(self, params):
+        address = self.__getAbsoluteAddress(params)
+        self.__lsr(address)
+    
+    # absolute x
+    def __lsr5E(self, params):
+        address = self.__getAbsoluteXAddress(params)
+        self.__lsr(address)
     
     # NOP: No Operation
     def __nop(self, params):
