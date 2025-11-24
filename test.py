@@ -126,6 +126,24 @@ class dm6502:
             0xA1: [self.__ldaA1, 2, 6, 0],
             0xB1: [self.__ldaB1, 2, 5, 1],
             
+            0xA2: [self.__ldxA2, 2, 2, 0],
+            0xA6: [self.__ldxA6, 2, 3, 0],
+            0xB6: [self.__ldxB6, 2, 4, 0],
+            0xAE: [self.__ldxAE, 3, 4, 0],
+            0xBE: [self.__ldxBE, 3, 4, 1],
+            
+            0xA2: [self.__ldxA2, 2, 2, 0],
+            0xA6: [self.__ldxA6, 2, 3, 0],
+            0xB6: [self.__ldxB6, 2, 4, 0],
+            0xAE: [self.__ldxAE, 3, 4, 0],
+            0xBE: [self.__ldxBE, 3, 4, 1],
+            
+            0xA0: [self.__ldyA0, 2, 2, 0],
+            0xA4: [self.__ldyA4, 2, 3, 0],
+            0xB4: [self.__ldyB4, 2, 4, 0],
+            0xAC: [self.__ldyAC, 3, 4, 0],
+            0xBC: [self.__ldyBC, 3, 4, 1],
+            
             0xEA: [self.__nop,   1, 2, 0]
             
         }
@@ -199,6 +217,9 @@ class dm6502:
     # zeropage x
     def __getZeroPageXAddress(self, param):
         return (param[0] + self.x) & 0xFF
+    # zeropage y
+    def __getZeroPageYAddress(self, param):
+        return (param[0] + self.y) & 0xFF
     # absolute
     def __getAbsoluteAddress(self, param):
         return (param[1] << 8) | param[0]
@@ -778,6 +799,70 @@ class dm6502:
         address = self.__getIndirectYAddress(params)
         self.__lda(self.memory[address])
         
+    # LDX: Load Index X with Memory
+    def __ldx(self, memory):
+        self.log(f"ldx {memory}", 5)
+        self.x = memory
+        # set flags
+        self.srFlagSet('z', memory == 0)
+        self.srFlagSet('n', bool((self.memory >> 7) & 1))
+    
+    # immediate
+    def __ldxA2(self, params):
+        self.__ldx(params[0])
+    
+    # zeropage
+    def __ldxA6(self, params):
+        address = self.__getZeroPageAddress(params)
+        self.__ldx(self.memory[address])
+        
+    # zeropage y
+    def __ldxB6(self, params):
+        address = self.__getZeroPageYAddress(params)
+        self.__ldx(self.memory[address])
+    
+    # absolute
+    def __ldxAE(self, params):
+        address = self.__getAbsoluteAddress(params)
+        self.__ldx(self.memory[address])
+    
+    # absolute y
+    def __ldxBE(self, params):
+        address = self.__getAbsoluteYAddress(params)
+        self.__ldx(self.memory[address])
+    
+    # LDY: Load Index Y with Memory
+    def __ldy(self, memory):
+        self.log(f"ldy {memory}", 5)
+        self.y = memory
+        # set flags
+        self.srFlagSet('z', memory == 0)
+        self.srFlagSet('n', bool((self.memory >> 7) & 1))
+    
+    # immediate
+    def __ldyA0(self, params):
+        self.__ldy(params[0])
+    
+    # zeropage
+    def __ldyA4(self, params):
+        address = self.__getZeroPageAddress(params)
+        self.__ldy(self.memory[address])
+        
+    # zeropage x
+    def __ldyB4(self, params):
+        address = self.__getZeroPageYXddress(params)
+        self.__ldy(self.memory[address])
+    
+    # absolute
+    def __ldyAC(self, params):
+        address = self.__getAbsoluteAddress(params)
+        self.__ldy(self.memory[address])
+    
+    # absolute x
+    def __ldyBC(self, params):
+        address = self.__getAbsoluteXAddress(params)
+        self.__ldy(self.memory[address])
+    
     # NOP: No Operation
     def __nop(self, params):
         self.log("nop", 5)
