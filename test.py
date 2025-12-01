@@ -159,7 +159,12 @@ class dm6502:
             0x1D: [self.__ora1D, 3, 4, 1],
             0x19: [self.__ora19, 3, 4, 1],
             0x01: [self.__ora01, 2, 6, 0],
-            0x11: [self.__ora11, 2, 5, 1]
+            0x11: [self.__ora11, 2, 5, 1],
+            
+            0x48: [self.__pha,   1, 3, 0],
+            0x08: [self.__php,   1, 3, 0],
+            0x68: [self.__pla,   1, 4, 0],
+            0x28: [self.__plp,   1, 4, 0],
             
         }
         
@@ -967,6 +972,30 @@ class dm6502:
     def __ora11(self, params):
         address = self.__getIndirectYAddress(params)
         self.__ora(self.memory[address])
-     
+    
+    # PHA: Push Accumulator on Stack
+    def __pha(self, params):
+        self.stackPush(self.a)
+    
+    # PHP: Push Processor Status on Stack
+    def __php(self, params):
+        res = self.sr | 0b00110000 # modified before push
+        self.stackPush(res)
+        
+    # PLA: Pull Accumulator from Stack
+    def __pla(self, params):
+        self.a = self.stackPull()
+        
+        # set cpu flags
+        self.srFlagSet('z', self.a == 0)
+        self.srFlagSet('n', bool((self.a >> 7) & 1))
+        
+    # PLP: Pull Processor Status from Stack
+    def __plp(self, params):
+        old = (self.sr & 0b00110000) # save old bits
+        self.sr = self.stackPull() # set the status register
+        self.sr |= old # restore old bits
+        
+    
 cpu = dm6502(0)
 cpu.decodeExecute(0x31, [1])
