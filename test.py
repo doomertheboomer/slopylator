@@ -150,7 +150,16 @@ class dm6502:
             0x4E: [self.__lsr4E, 3, 6, 0],
             0x5E: [self.__lsr5E, 3, 7, 0],
             
-            0xEA: [self.__nop,   1, 2, 0]
+            0xEA: [self.__nop,   1, 2, 0],
+            
+            0x09: [self.__ora09, 2, 2, 0],
+            0x05: [self.__ora05, 2, 3, 0],
+            0x15: [self.__ora15, 2, 4, 0],
+            0x0D: [self.__ora0D, 3, 4, 0],
+            0x1D: [self.__ora1D, 3, 4, 1],
+            0x19: [self.__ora19, 3, 4, 1],
+            0x01: [self.__ora01, 2, 6, 0],
+            0x11: [self.__ora11, 2, 5, 1]
             
         }
         
@@ -913,5 +922,51 @@ class dm6502:
     def __nop(self, params):
         self.log("nop", 5)
     
+    # ORA: OR Memory with Accumulator
+    def __ora(self, memory):
+        self.a |= memory
+        # set cpu flags
+        self.srFlagSet('z', self.a == 0)
+        self.srFlagSet('n', bool((self.a >> 7) & 1))
+    
+    # immediate
+    def __ora09(self, params):
+        self.__ora(params[0])
+        
+    # zeropage
+    def __ora05(self, params):
+        address = self.__getZeroPageAddress(params)
+        self.__ora(self.memory[address])
+        
+    # zeropage x
+    def __ora15(self, params):
+        address = self.__getZeroPageXAddress(params)
+        self.__ora(self.memory[address])
+        
+    # absolute
+    def __ora0D(self, params):
+        address = self.__getAbsoluteAddress(params)
+        self.__ora(self.memory[address])
+        
+    # absolute x
+    def __ora1D(self, params):
+        address = self.__getAbsoluteXAddress(params)
+        self.__ora(self.memory[address])
+        
+    # absolute y
+    def __ora19(self, params):
+        address = self.__getAbsoluteYAddress(params)
+        self.__ora(self.memory[address])
+        
+    # indirect x
+    def __ora01(self, params):
+        address = self.__getIndirectXAddress(params)
+        self.__ora(self.memory[address])
+    
+    # indirect y
+    def __ora11(self, params):
+        address = self.__getIndirectYAddress(params)
+        self.__ora(self.memory[address])
+     
 cpu = dm6502(0)
 cpu.decodeExecute(0x31, [1])
