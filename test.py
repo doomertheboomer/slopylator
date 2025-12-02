@@ -166,6 +166,11 @@ class dm6502:
             0x68: [self.__pla,   1, 4, 0],
             0x28: [self.__plp,   1, 4, 0],
             
+            0x2A: [self.__rol2A, 1, 2, 0],
+            0x26: [self.__rol26, 2, 5, 0],
+            0x36: [self.__rol36, 2, 6, 0],
+            0x2E: [self.__rol2E, 3, 6, 0],
+            0x3E: [self.__rol3E, 3, 7, 0],
         }
         
         self.log("6502 CPU initialized", 3)
@@ -929,6 +934,7 @@ class dm6502:
     
     # ORA: OR Memory with Accumulator
     def __ora(self, memory):
+        self.log(f"ora {memory}", 5)
         self.a |= memory
         # set cpu flags
         self.srFlagSet('z', self.a == 0)
@@ -975,16 +981,19 @@ class dm6502:
     
     # PHA: Push Accumulator on Stack
     def __pha(self, params):
+        self.log(f"pha {self.a}", 5)
         self.stackPush(self.a)
     
     # PHP: Push Processor Status on Stack
     def __php(self, params):
+        self.log(f"php {self.sr}", 5)
         res = self.sr | 0b00110000 # modified before push
         self.stackPush(res)
         
     # PLA: Pull Accumulator from Stack
     def __pla(self, params):
         self.a = self.stackPull()
+        self.log(f"pla {self.a}", 5)
         
         # set cpu flags
         self.srFlagSet('z', self.a == 0)
@@ -995,7 +1004,49 @@ class dm6502:
         old = (self.sr & 0b00110000) # save old bits
         self.sr = self.stackPull() # set the status register
         self.sr |= old # restore old bits
+        self.log(f"plp {self.sr}", 5)
         
+    # ROL: Rotate One Bit Left (Memory or Accumulator)
+    def __rol(self, address):
+        # Move each of the bits in either A or M one place to the left. Bit 0 is filled with the current value of the carry flag whilst the old bit 7 becomes the new carry flag value.
+        self.log(f"rol {address}")
+        old = self.memory[address]
+        self.memory[address] = self.memory[address] << 1
+        # set all da flags
+        self.srFlagSet('c', bool((old >> 7) & 1))
+        self.srFlagSet('z', self.memory[address] == 0)
+        self.srFlagSet('n', bool((self.memory[address] >> 7) & 1))
+    
+    # accumulator
+    def __rol2A(self, params):
+        # Move each of the bits in either A or M one place to the left. Bit 0 is filled with the current value of the carry flag whilst the old bit 7 becomes the new carry flag value.
+        self.log(f"rol A")
+        old = self.a
+        self.a = self.a << 1
+        # set all da flags
+        self.srFlagSet('c', bool((old >> 7) & 1))
+        self.srFlagSet('z', self.a == 0)
+        self.srFlagSet('n', bool((self.a >> 7) & 1))
+        
+    # zeropage
+    def __rol26(self, params):
+        addr = self.__getZeroPageAddress(params)
+        self.__rol(addr)
+        
+    # zeropage x
+    def __rol36(self, params):
+        addr = self.__getZeroPageXAddress(params)
+        self.__rol(addr)
+    
+    # absolute
+    def __rol2E(self, params):
+        addr = self.__getAbsoluteAddress(params)
+        self.__rol(addr)
+    
+    # absolute x
+    def __rol3E(self, params):
+        addr = self.__getAbsoluteXAddress(params)
+        self.__rol(addr)
     
 cpu = dm6502(0)
 cpu.decodeExecute(0x31, [1])
