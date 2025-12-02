@@ -177,6 +177,9 @@ class dm6502:
             0x76: [self.__ror76, 2, 6, 0],
             0x6E: [self.__ror6E, 3, 6, 0],
             0x7E: [self.__ror7E, 3, 7, 0],
+            
+            0x40: [self.__rti,   1, 6, 0],
+            0x60: [self.__rts,   1, 6, 0],
         }
         
         self.log("6502 CPU initialized", 3)
@@ -1099,6 +1102,22 @@ class dm6502:
     def __ror7E(self, params):
         addr = self.__getAbsoluteXAddress(params)
         self.__ror(addr)
+    
+    # RTI: Return from Interrupt
+    def __rti(self, params):
+        flags = (self.stackPull()) & 0b11001111 # 2 flags are ignored
+        lobyte = self.stackPull()
+        hibyte = self.stackPull()
+        
+        # set the stuff
+        self.sr |= flags
+        self.pc = (lobyte & 0xFF) | ((hibyte << 8) & 0xFF)
+        
+    # RTS: Return from Subroutine
+    def __rts(self, params):
+        lobyte = self.stackPull()
+        hibyte = self.stackPull()
+        self.pc = (((lobyte & 0xFF) | ((hibyte << 8) & 0xFF)) + 1) & 0xFFFF # limit to 16 bit address space
     
 cpu = dm6502(0)
 cpu.decodeExecute(0x31, [1])
