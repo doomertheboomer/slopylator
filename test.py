@@ -180,6 +180,15 @@ class dm6502:
             
             0x40: [self.__rti,   1, 6, 0],
             0x60: [self.__rts,   1, 6, 0],
+            
+            0xE9: [self.__sbcE9, 2, 2, 0],
+            0xE5: [self.__sbcE5, 2, 3, 0],
+            0xF5: [self.__sbcF5, 2, 4, 0],
+            0xED: [self.__sbcED, 3, 4, 0],
+            0xFD: [self.__sbcFD, 3, 4, 1],
+            0xF9: [self.__sbcF9, 3, 4, 1],
+            0xE1: [self.__sbcE1, 2, 6, 0],
+            0xF1: [self.__sbcF1, 2, 5, 1],
         }
         
         self.log("6502 CPU initialized", 3)
@@ -1112,12 +1121,70 @@ class dm6502:
         # set the stuff
         self.sr |= flags
         self.pc = (lobyte & 0xFF) | ((hibyte << 8) & 0xFF)
+        self.log(f"rti {self.pc}", 5)
         
     # RTS: Return from Subroutine
     def __rts(self, params):
         lobyte = self.stackPull()
         hibyte = self.stackPull()
-        self.pc = (((lobyte & 0xFF) | ((hibyte << 8) & 0xFF)) + 1) & 0xFFFF # limit to 16 bit address space
+        self.pc = (((lobyte & 0xFF) | ((hibyte << 8) & 0xFF)) + 1) & 0xFFFF # add 1 and limit to 16 bit address space
+        self.log(f"rts {self.pc}", 5)
+
+    
+    # SBC: Subtract Memory from Accumulator with Borrow
+    def __sbc(self, memory):
+        # initial operation
+        oldA = self.a
+        self.a = self.a + ~memory + int(self.srFlagGet('c'))
+        
+        # weird flagset
+        self.srFlagSet('c', bool(~(self.a < 0))) # ~(result < $00)
+        
+        # do 8bit wrap to val and do rest of flags
+        self.a &= 0xFF
+        self.srFlagSet('v', bool((self.a ^ oldA) & (self.a ^ ~memory) & 0x80)) # (result ^ A) & (result ^ ~memory) & $80
+        self.srFlagSet('z', self.a == 0) # result == 0
+        self.srFlagSet('n', bool((self.a >> 7) & 1))
+        self.log(f"sbc {self.a}", 5)
+        
+    # immediate
+    def __sbcE9(self, params):
+        self.__sbc(params[0])
+    
+    # zeropage
+    def __sbcE5(self, params):
+        address = self.__getZeroPageAddress(params)
+        self.__sbc(self.memory[address])
+        
+    # zeropage x
+    def __sbcF5(self, params):
+        address = self.__getZeroPageXAddress(params)
+        self.__sbc(self.memory[address])
+    
+    # absolute
+    def __sbcED(self, params):
+        address = self.__getAbsoluteAddress(params)
+        self.__sbc(self.memory[address])
+    
+    # absolute x
+    def __sbcFD(self, params):
+        address = self.__getAbsoluteXAddress(params)
+        self.__sbc(self.memory[address])
+        
+    # absolute y
+    def __sbcF9(self, params):
+        address = self.__getAbsoluteYAddress(params)
+        self.__sbc(self.memory[address])
+        
+    # indirect x
+    def __sbcE1(self, params):
+        address = self.__getIndirectXAddress(params)
+        self.__sbc(self.memory[address])
+        
+    # indirect y
+    def __sbcF1(self, params):
+        address = self.__getIndirectYAddress(params)
+        self.__sbc(self.memory[address])
     
 cpu = dm6502(0)
 cpu.decodeExecute(0x31, [1])
