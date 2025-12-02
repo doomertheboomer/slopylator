@@ -171,6 +171,12 @@ class dm6502:
             0x36: [self.__rol36, 2, 6, 0],
             0x2E: [self.__rol2E, 3, 6, 0],
             0x3E: [self.__rol3E, 3, 7, 0],
+            
+            0x6A: [self.__ror6A, 1, 2, 0],
+            0x66: [self.__ror66, 2, 5, 0],
+            0x76: [self.__ror76, 2, 6, 0],
+            0x6E: [self.__ror6E, 3, 6, 0],
+            0x7E: [self.__ror7E, 3, 7, 0],
         }
         
         self.log("6502 CPU initialized", 3)
@@ -1011,7 +1017,8 @@ class dm6502:
         # Move each of the bits in either A or M one place to the left. Bit 0 is filled with the current value of the carry flag whilst the old bit 7 becomes the new carry flag value.
         self.log(f"rol {address}")
         old = self.memory[address]
-        self.memory[address] = self.memory[address] << 1
+        self.memory[address] = self.memory[address] << 1 # Move each of the bits in either A or M one place to the left
+        self.a |= int(self.srFlagGet('c')) # Bit 0 is filled with the current value of the carry flag
         # set all da flags
         self.srFlagSet('c', bool((old >> 7) & 1))
         self.srFlagSet('z', self.memory[address] == 0)
@@ -1022,9 +1029,10 @@ class dm6502:
         # Move each of the bits in either A or M one place to the left. Bit 0 is filled with the current value of the carry flag whilst the old bit 7 becomes the new carry flag value.
         self.log(f"rol A")
         old = self.a
-        self.a = self.a << 1
+        self.a = self.a << 1 # Move each of the bits in either A or M one place to the left
+        self.a |= int(self.srFlagGet('c')) # Bit 0 is filled with the current value of the carry flag
         # set all da flags
-        self.srFlagSet('c', bool((old >> 7) & 1))
+        self.srFlagSet('c', bool((old >> 7) & 1)) # the old bit 7 becomes the new carry flag value
         self.srFlagSet('z', self.a == 0)
         self.srFlagSet('n', bool((self.a >> 7) & 1))
         
@@ -1047,6 +1055,8 @@ class dm6502:
     def __rol3E(self, params):
         addr = self.__getAbsoluteXAddress(params)
         self.__rol(addr)
+        
+    
     
 cpu = dm6502(0)
 cpu.decodeExecute(0x31, [1])
