@@ -189,6 +189,10 @@ class dm6502:
             0xF9: [self.__sbcF9, 3, 4, 1],
             0xE1: [self.__sbcE1, 2, 6, 0],
             0xF1: [self.__sbcF1, 2, 5, 1],
+            
+            0x38: [self.__sec,   1, 2, 0],
+            0xF8: [self.__sed,   1, 2, 0],
+            0x78: [self.__sei,   1, 2, 0],
         }
         
         self.log("6502 CPU initialized", 3)
@@ -1083,7 +1087,7 @@ class dm6502:
     # accumulator
     def __ror6A(self, params):
         # Move each of the bits in either A or M one place to the right. Bit 7 is filled with the current value of the carry flag whilst the old bit 0 becomes the new carry flag value. 
-        self.log(f"rol A")
+        self.log(f"ror A")
         old = self.a
         self.a = self.a << 1 # Move each of the bits in either A or M one place to the right
         self.a |= ((int(self.srFlagGet('c'))) << 7) # Bit 7 is filled with the current value of the carry flag
@@ -1185,6 +1189,18 @@ class dm6502:
     def __sbcF1(self, params):
         address = self.__getIndirectYAddress(params)
         self.__sbc(self.memory[address])
+    
+    # SEC: Set Carry Flag
+    def __sec(self, params):
+        self.srFlagSet('c', True)
+    
+    # SED: Set Decimal Flag
+    def __sed(self, params):
+        self.srFlagSet('d', True)
+        
+    # SEI: Set Interrupt Disable Status
+    def __sei(self, params):
+        self.srFlagSet('i', True)
     
 cpu = dm6502(0)
 cpu.decodeExecute(0x31, [1])
