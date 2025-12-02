@@ -1018,9 +1018,9 @@ class dm6502:
         self.log(f"rol {address}")
         old = self.memory[address]
         self.memory[address] = self.memory[address] << 1 # Move each of the bits in either A or M one place to the left
-        self.a |= int(self.srFlagGet('c')) # Bit 0 is filled with the current value of the carry flag
+        self.memory[address] |= int(self.srFlagGet('c')) # Bit 0 is filled with the current value of the carry flag
         # set all da flags
-        self.srFlagSet('c', bool((old >> 7) & 1))
+        self.srFlagSet('c', bool((old >> 7) & 1)) # the old bit 7 becomes the new carry flag value
         self.srFlagSet('z', self.memory[address] == 0)
         self.srFlagSet('n', bool((self.memory[address] >> 7) & 1))
     
@@ -1056,7 +1056,49 @@ class dm6502:
         addr = self.__getAbsoluteXAddress(params)
         self.__rol(addr)
         
+    # ROL: Rotate Right Bit Left (Memory or Accumulator)
+    def __ror(self, address):
+        # Move each of the bits in either A or M one place to the right. Bit 7 is filled with the current value of the carry flag whilst the old bit 0 becomes the new carry flag value. 
+        self.log(f"rol {address}")
+        old = self.memory[address]
+        self.memory[address] = self.memory[address] << 1 # Move each of the bits in either A or M one place to the right
+        self.memory[address] |= ((int(self.srFlagGet('c'))) << 7) # Bit 7 is filled with the current value of the carry flag
+        # set all da flags
+        self.srFlagSet('c', bool(old & 1)) # the old bit 0 becomes the new carry flag value
+        self.srFlagSet('z', self.memory[address] == 0)
+        self.srFlagSet('n', bool((self.memory[address] >> 7) & 1))
+        
+    # accumulator
+    def __ror6A(self, params):
+        # Move each of the bits in either A or M one place to the right. Bit 7 is filled with the current value of the carry flag whilst the old bit 0 becomes the new carry flag value. 
+        self.log(f"rol A")
+        old = self.a
+        self.a = self.a << 1 # Move each of the bits in either A or M one place to the right
+        self.a |= ((int(self.srFlagGet('c'))) << 7) # Bit 7 is filled with the current value of the carry flag
+        # set all da flags
+        self.srFlagSet('c', bool(old & 1)) # the old bit 0 becomes the new carry flag value
+        self.srFlagSet('z', self.a == 0)
+        self.srFlagSet('n', bool((self.a >> 7) & 1))
+        
+    # zeropage
+    def __ror66(self, params):
+        addr = self.__getZeroPageAddress(params)
+        self.__ror(addr)
     
+    # zeropage x
+    def __ror76(self, params):
+        addr = self.__getZeroPageXAddress(params)
+        self.__ror(addr)
+    
+    # absolute
+    def __ror6E(self, params):
+        addr = self.__getAbsoluteAddress(params)
+        self.__ror(addr)
+        
+    # absolute x
+    def __ror7E(self, params):
+        addr = self.__getAbsoluteXAddress(params)
+        self.__ror(addr)
     
 cpu = dm6502(0)
 cpu.decodeExecute(0x31, [1])
