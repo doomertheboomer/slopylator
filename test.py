@@ -209,7 +209,13 @@ class dm6502:
             0x84: [self.__sty84, 2, 3, 0],
             0x94: [self.__sty94, 2, 4, 0],
             0x8C: [self.__sty8C, 3, 4, 0],
-
+            
+            0xAA: [self.__tax,   1, 2, 0],
+            0xA8: [self.__tay,   1, 2, 0],
+            0xBA: [self.__tsx,   1, 2, 0],
+            0x8A: [self.__txa,   1, 2, 0],
+            0x9A: [self.__txs,   1, 2, 0],
+            0x98: [self.__tya,   1, 2, 0],
         }
         
         self.log("6502 CPU initialized", 3)
@@ -1302,5 +1308,51 @@ class dm6502:
         address = self.__getAbsoluteAddress(params)
         self.__sty(address)
         
+    # TAX: Transfer Accumulator to Index X
+    def __tax(self, params):
+        self.x = self.a
+        # set flags
+        self.srFlagSet('z', self.x == 0)
+        self.srFlagSet('n', bool((self.x >> 7) & 1))
+        self.log(f"tax {self.x}", 5)
+    
+    # TAY: Transfer Accumulator to Index Y
+    def __tay(self, params):
+        self.y = self.a
+        # set flags
+        self.srFlagSet('z', self.y == 0)
+        self.srFlagSet('n', bool((self.y >> 7) & 1))
+        self.log(f"tay {self.y}", 5)
+    
+    # TSX: Transfer Stack Pointer to Index X
+    def __tsx(self, params):
+        self.x = self.sp
+        # set flags
+        self.srFlagSet('z', self.x == 0)
+        self.srFlagSet('n', bool((self.x >> 7) & 1))
+        self.log(f"tsx {self.x}", 5)
+        
+    # TXA: Transfer Index X to Accumulator
+    def __txa(self, params):
+        self.a = self.x
+        # set flags
+        self.srFlagSet('z', self.x == 0)
+        self.srFlagSet('n', bool((self.x >> 7) & 1))
+        self.log(f"txa {self.x}", 5)
+    
+    # TXS: Transfer Index X to Stack Pointer
+    def __txs(self, params):
+        self.sp = self.x
+        self.log(f"txs {self.x}", 5)
+    
+    # TYA: Transfer Index Y to Accumulator
+    def __tya(self, params):
+        self.a = self.y
+        # set flags
+        self.srFlagSet('z', self.y == 0)
+        self.srFlagSet('n', bool((self.y >> 7) & 1))
+        self.log(f"tya {self.y}", 5)
+        
+    
 cpu = dm6502(0)
 cpu.decodeExecute(0x31, [1])
