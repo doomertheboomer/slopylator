@@ -227,6 +227,20 @@ class dm6502:
         if (self.loglevel <= level):
             print("[cpu]",self.loglevels[level], *va_list)
     
+    def fetch(self, pc = 67676767):
+        if pc == 67676767:
+            pc = self.pc # cannot access self as default val i hate you python
+        
+        opcode = self.memory[pc]
+        params = []
+        # determine params array for opcode
+        if (opcode in self.__opcodes):
+            paramLen = self.__opcodes[opcode][1]
+            params = self.memory[(pc+1):(pc+paramLen)] # start from after the instruction and parse remaining instructions (paramLen is already added by 1 by default)
+        
+        self.decodeExecute(opcode, params)
+        
+    
     def decodeExecute(self, opcode, params):
         # execute the opcode
         if (opcode in self.__opcodes) and (len(params) == self.__opcodes[opcode][1] - 1): # params len is subtracted by 1
