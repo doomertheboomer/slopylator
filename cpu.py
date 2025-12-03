@@ -1370,7 +1370,3 @@ class dm6502:
         self.srFlagSet('z', self.y == 0)
         self.srFlagSet('n', bool((self.y >> 7) & 1))
         self.log(f"tya {self.y}", 5)
-        
-    
-cpu = dm6502(0)
-cpu.decodeExecute(0x31, [1])
