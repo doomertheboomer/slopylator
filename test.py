@@ -193,6 +193,15 @@ class dm6502:
             0x38: [self.__sec,   1, 2, 0],
             0xF8: [self.__sed,   1, 2, 0],
             0x78: [self.__sei,   1, 2, 0],
+            
+            0x85: [self.__sta85, 2, 3, 0],
+            0x95: [self.__sta95, 2, 4, 0],
+            0x8D: [self.__sta8D, 3, 4, 0],
+            0x9D: [self.__sta9D, 3, 5, 0],
+            0x99: [self.__sta99, 3, 5, 0],
+            0x81: [self.__sta81, 2, 6, 0],
+            0x91: [self.__sta91, 2, 6, 0],
+
         }
         
         self.log("6502 CPU initialized", 3)
@@ -1192,15 +1201,58 @@ class dm6502:
     
     # SEC: Set Carry Flag
     def __sec(self, params):
+        self.log("sec", 5)
         self.srFlagSet('c', True)
     
     # SED: Set Decimal Flag
     def __sed(self, params):
+        self.log("sed", 5)
         self.srFlagSet('d', True)
         
     # SEI: Set Interrupt Disable Status
     def __sei(self, params):
-        self.srFlagSet('i', True)
+        self.log("sei", 5)
+        self.srFlagSet('i', True) # TODO: this is delayed by 1 instruction
+    
+    # STA: Store Accumulator in Memory
+    def __sta(self, address):
+        self.memory[address] = self.a
+        self.log(f"sta {self.a}", 5)
+        
+    # zeropage
+    def __sta85(self, params):
+        address = self.__getZeroPageAddress(params)
+        self.__sta(address)
+    
+    # zeropage x
+    def __sta95(self, params):
+        address = self.__getZeroPageXAddress(params)
+        self.__sta(address)
+    
+    # absolute
+    def __sta8D(self, params):
+        address = self.__getAbsoluteAddress(params)
+        self.__sta(address)
+        
+    # absolute x
+    def __sta9D(self, params):
+        address = self.__getAbsoluteXAddress(params)
+        self.__sta(address)
+    
+    # absolute y
+    def __sta99(self, params):
+        address = self.__getAbsoluteYAddress(params)
+        self.__sta(address)
+        
+    # indirect x
+    def __sta81(self, params):
+        address = self.__getIndirectXAddress(params)
+        self.__sta(address)
+        
+    # indirect y
+    def __sta91(self, params):
+        address = self.__getIndirectYAddress(params)
+        self.__sta(address)
     
 cpu = dm6502(0)
 cpu.decodeExecute(0x31, [1])
