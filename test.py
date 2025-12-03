@@ -465,24 +465,28 @@ class dm6502:
         address = self.__getAbsoluteXAddress(params)
         self.__asl(address)
     
-    # TODO: wraparound branches and branch internal func
+    # branch wrapper
+    def __branch(self, size):
+        self.pc += self.toSign8(size)
+        self.pc &= 0xFFFF
+    
     # BCC: Branch on Carry Clear
     def __bcc(self, params):
         self.log(f"bcc {params[0]}", 5)
         if self.srFlagGet('c') == False:
-            self.pc += self.toSign8(params[0]) # function size will be added to pc after exec
+            self.__branch(params[0]) # function size will be added to pc after exec
     
     # BCS: Branch on Carry Set
     def __bcs(self, params):
         self.log(f"bcs {params[0]}", 5)
         if self.srFlagGet('c'):
-            self.pc += self.toSign8(params[0]) # function size will be added to pc after exec
+            self.__branch(params[0]) # function size will be added to pc after exec
             
     # BEQ: Branch on Result Zero
     def __beq(self, params):
         self.log(f"beq {params[0]}", 5)
         if self.srFlagGet('z'):
-            self.pc += self.toSign8(params[0]) # function size will be added to pc after exec
+            self.__branch(params[0]) # function size will be added to pc after exec
             
     # BIT: Test Bits in Memory with Accumulator
     # zero page
@@ -511,19 +515,19 @@ class dm6502:
     def __bmi(self, params):
         self.log(f"bmi {params[0]}", 5)
         if self.srFlagGet('n'):
-            self.pc += self.toSign8(params[0]) # function size will be added to pc after exec
+            self.__branch(params[0]) # function size will be added to pc after exec
     
     # BNE: Branch on Result Not Zero
     def __bne(self, params):
         self.log(f"bne {params[0]}", 5)
         if self.srFlagGet('z') == False:
-            self.pc += self.toSign8(params[0]) # function size will be added to pc after exec
+            self.__branch(params[0]) # function size will be added to pc after exec
     
     # BPL: Branch on Result Zero
     def __bpl(self, params):
         self.log(f"bpl {params[0]}", 5)
         if self.srFlagGet('n') == False:
-            self.pc += self.toSign8(params[0]) # function size will be added to pc after exec
+            self.__branch(params[0]) # function size will be added to pc after exec
     
     # BRK: Force Break
     def __brk(self, params):
@@ -548,13 +552,13 @@ class dm6502:
     def __bvc(self, params):
         self.log(f"bvc {params[0]}", 5)
         if self.srFlagGet('v') == False:
-            self.pc += self.toSign8(params[0]) # function size will be added to pc after exec
+            self.__branch(params[0]) # function size will be added to pc after exec
             
     # BVS: Branch on Overflow Set
     def __bvs(self, params):
         self.log(f"bvs {params[0]}", 5)
         if self.srFlagGet('v'):
-            self.pc += self.toSign8(params[0]) # function size will be added to pc after exec
+            self.__branch(params[0]) # function size will be added to pc after exec
 
     # CLC: Clear Carry Flag
     def __clc(self, params):
