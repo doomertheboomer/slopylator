@@ -201,6 +201,14 @@ class dm6502:
             0x99: [self.__sta99, 3, 5, 0],
             0x81: [self.__sta81, 2, 6, 0],
             0x91: [self.__sta91, 2, 6, 0],
+            
+            0x86: [self.__stx86, 2, 3, 0],
+            0x96: [self.__stx96, 2, 4, 0],
+            0x8E: [self.__stx8E, 3, 4, 0],
+            
+            0x84: [self.__sty84, 2, 3, 0],
+            0x94: [self.__sty94, 2, 4, 0],
+            0x8C: [self.__sty8C, 3, 4, 0],
 
         }
         
@@ -1253,6 +1261,46 @@ class dm6502:
     def __sta91(self, params):
         address = self.__getIndirectYAddress(params)
         self.__sta(address)
+        
+    # STX: Store Index X in Memory
+    def __stx(self, address):
+        self.memory[address] = self.x
+        self.log(f"stx {self.x}", 5)
+        
+    # zeropage
+    def __stx86(self, params):
+        address = self.__getZeroPageAddress(params)
+        self.__stx(address)
     
+    # zeropage y
+    def __stx96(self, params):
+        address = self.__getZeroPageYAddress(params)
+        self.__stx(address)
+    
+    # absolute
+    def __stx8E(self, params):
+        address = self.__getAbsoluteAddress(params)
+        self.__stx(address)
+        
+    # STY: Store Index Y in Memory
+    def __sty(self, address):
+        self.memory[address] = self.y
+        self.log(f"sty {self.y}", 5)
+    
+    # zeropage
+    def __sty84(self, params):
+        address = self.__getZeroPageAddress(params)
+        self.__sty(address)
+    
+    # zeropage x
+    def __sty94(self, params):
+        address = self.__getZeroPageXAddress(params)
+        self.__sty(address)
+    
+    # absolute
+    def __sty8C(self, params):
+        address = self.__getAbsoluteAddress(params)
+        self.__sty(address)
+        
 cpu = dm6502(0)
 cpu.decodeExecute(0x31, [1])
