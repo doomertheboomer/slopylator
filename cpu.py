@@ -227,16 +227,47 @@ class dm6502:
         if (self.loglevel <= level):
             print("[cpu]",self.loglevels[level], *va_list)
     
-    def fetch(self, pc = 67676767):
-        if pc == 67676767:
+    # address mirroring logic
+    def getMemAddy(self, address):
+        # first mirror 0x800-0x1FFF
+        if (address >= 0x800) and (address <= 0x1FFF):
+            address %= 0x800
+            return address
+            
+        # second mirror 0x2008-0x4000
+        if (address >= 0x2008) and (address <= 0x3FFF):
+            address = ((address - 0x2000) % 0x8) + 0x2000
+            return address
+            
+        # default case
+        return address
+    
+    def memoryRead(self, address, end = None):
+        fixAddy = self.getMemAddy(address)
+        if end != None:
+            retVal = []
+            for i in range(address, end):
+                fixAddy = self.getMemAddy(i)
+                retVal.append(self.memory[i])
+                return retVal
+        else:
+            return self.memory[fixAddy]
+    
+    def memoryWrite(self, address, value):
+        fixAddy = self.getMemAddy(address)
+        self.memory[fixAddy] = value    
+    
+    def fetch(self, pc = None):
+        if pc == None:
             pc = self.pc # cannot access self as default val i hate you python
         
-        opcode = self.memory[pc]
+        opcode = self.memoryRead(pc)
         params = []
         # determine params array for opcode
         if (opcode in self.__opcodes):
             paramLen = self.__opcodes[opcode][1]
-            params = self.memory[(pc+1):(pc+paramLen)] # start from after the instruction and parse remaining instructions (paramLen is already added by 1 by default)
+            # params = self.memory[(pc+1):(pc+paramLen)]
+            params = self.memoryRead(pc+1, pc+paramLen) # start from after the instruction and parse remaining instructions (paramLen is already added by 1 by default)
         
         self.decodeExecute(opcode, params)
         
@@ -281,12 +312,12 @@ class dm6502:
         
     def stackPush(self, val):
         val &= 0xFF
-        self.memory[self.sp + 0x100] = val # stack is on page 1
+        self.memoryWrite(self.sp + 0x100, val) # stack is on page 1
         self.sp -= 1
         self.sp &= 0xFF
     
     def stackPull(self):
-        retVal = self.memory[self.sp + 0x100]
+        retVal = self.memoryRead(self.sp + 0x100)
         self.sp += 1
         self.sp &= 0xFF
         return retVal
@@ -318,18 +349,18 @@ class dm6502:
         lobyte = param[0] # bb
         hibyte = param[1] # cc
         address = (hibyte << 8) | lobyte # ccbb
-        lobyte2 = self.memory[address] # xx
-        hibyte2 = self.memory[(address + 1) & 0xFF] # yy
+        lobyte2 = self.memoryRead(address) # xx
+        hibyte2 = self.memoryRead((address + 1) & 0xFF) # yy
         address2 = (hibyte2 << 8) | lobyte2 # yyxx
         return address2 # set pc to this address for jmp
     # indirect x
     def __getIndirectXAddress(self, param):
         # val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)
-        return self.memory[(param[0] + self.x) & 0xFF] + self.memory[(param[0] + self.x + 1) & 0xFF] * 0x100
+        return self.memoryRead((param[0] + self.x) & 0xFF) + self.memoryRead((param[0] + self.x + 1) & 0xFF) * 0x100
     # indirect y
     def __getIndirectYAddress(self, param):
         # val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)
-        return self.memory[param[0]] + self.memory[(param[0] + 1) & 0xFF] * 0x100 + self.y
+        return self.memoryRead(param[0]) + self.memoryRead((param[0] + 1) & 0xFF) * 0x100 + self.y
     
     # ADC: Add Memory to Accumulator with Carry
     def __adc(self, amount):
@@ -358,39 +389,39 @@ class dm6502:
     # zeropage
     def __adc65(self, params):
         address = self.__getZeroPageAddress(params)
-        self.__adc(self.memory[address])
+        self.__adc(self.memoryRead(address))
     
     # zeropage x
     def __adc75(self, params):
         address = self.__getZeroPageXAddress(params)
-        self.__adc(self.memory[address])
+        self.__adc(self.memoryRead(address))
     
     # absolute
     def __adc6D(self, params):
         address = self.__getAbsoluteAddress(params)
-        self.__adc(self.memory[address])
+        self.__adc(self.memoryRead(address))
         
     # absolute x
     def __adc7D(self, params):
         address = self.__getAbsoluteXAddress(params)
-        self.__adc(self.memory[address])
+        self.__adc(self.memoryRead(address))
 
     # absolute y
     def __adc79(self, params):
         address = self.__getAbsoluteYAddress(params)
-        self.__adc(self.memory[address])
+        self.__adc(self.memoryRead(address))
     
     # indirect x
     def __adc61(self, params):
         # val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)
         address = self.__getIndirectXAddress(params)
-        self.__adc(self.memory[address])
+        self.__adc(self.memoryRead(address))
 
     # indirect y
     def __adc71(self, params):
         # val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)
         address = self.__getIndirectYAddress(params)
-        self.__adc(self.memory[address])
+        self.__adc(self.memoryRead(address))
     
     # AND: AND Memory with Accumulator
     def __and(self, value):
@@ -408,46 +439,47 @@ class dm6502:
     # zeropage
     def __and25(self, params):
         address = self.__getZeroPageAddress(params)
-        self.__and(self.memory[address])
+        self.__and(self.memoryRead(address))
 
     # zeropage x
     def __and35(self, params):
         address = self.__getZeroPageXAddress(params)
-        self.__and(self.memory[address])
+        self.__and(self.memoryRead(address))
     
     # absolute
     def __and2D(self, params):
         address = self.__getAbsoluteAddress(params)
-        self.__and(self.memory[address])
+        self.__and(self.memoryRead(address))
     
     # absolute x
     def __and3D(self, params):
         address = self.__getAbsoluteXAddress(params)
-        self.__and(self.memory[address])
+        self.__and(self.memoryRead(address))
 
     # absolute y
     def __and39(self, params):
         address = self.__getAbsoluteYAddress(params)
-        self.__and(self.memory[address])
+        self.__and(self.memoryRead(address))
     
     # indirect x
     def __and21(self, params):
         address = self.__getIndirectXAddress(params)
-        self.__and(self.memory[address])
+        self.__and(self.memoryRead(address))
     
     # indirect y
     def __and31(self, params):
         address = self.__getIndirectYAddress(params)
-        self.__and(self.memory[address])
+        self.__and(self.memoryRead(address))
     
     # ASL: Shift Left One Bit (Memory or Accumulator)
     def __asl(self, address):
-        old = self.memory[address]
-        self.memory[address] = self.memory[address] << 1
+        old = self.memoryRead(address)
+        # self.memory[address] = self.memory[address] << 1
+        self.memoryWrite(address, self.memoryRead(address) << 1)
         # set status flags
         self.srFlagSet('c', bool((old >> 7) & 1))
-        self.srFlagSet('n', bool((self.memory[address] >> 7) & 1))
-        self.srFlagSet('z', self.memory[address] == 0)
+        self.srFlagSet('n', bool((self.memoryRead(address) >> 7) & 1))
+        self.srFlagSet('z', self.memoryRead(address) == 0)
         pass
     
     # accumulator
@@ -506,24 +538,24 @@ class dm6502:
     # zero page
     def __bit24(self, params):
         address = self.__getZeroPageAddress(params)
-        result = self.a & self.memory[address]
+        result = self.a & self.memoryRead(address)
         self.log(f"bit {result}", 5)
 
         
         # set bits
         self.srFlagSet('z', result == 0)
-        self.srFlagSet('v', bool((self.memory[address] >> 6) & 1))
-        self.srFlagSet('n', bool((self.memory[address] >> 7) & 1))
+        self.srFlagSet('v', bool((self.memoryRead(address) >> 6) & 1))
+        self.srFlagSet('n', bool((self.memoryRead(address) >> 7) & 1))
         
     def __bit2C(self, params):
         address = self.__getAbsoluteAddress(params)
-        result = self.a & self.memory[address]
+        result = self.a & self.memoryRead(address)
         self.log(f"bit {result}", 5)
 
         # set bits
         self.srFlagSet('z', result == 0)
-        self.srFlagSet('v', bool((self.memory[address] >> 6) & 1))
-        self.srFlagSet('n', bool((self.memory[address] >> 7) & 1))
+        self.srFlagSet('v', bool((self.memoryRead(address) >> 6) & 1))
+        self.srFlagSet('n', bool((self.memoryRead(address) >> 7) & 1))
         
     # BMI: Branch on Result Minus
     def __bmi(self, params):
@@ -609,37 +641,37 @@ class dm6502:
     # zeropage
     def __cmpC5(self, params):
         address = self.__getZeroPageAddress(params)
-        self.__cmp(self.memory[address])
+        self.__cmp(self.memoryRead(address))
     
     # zeropage x
     def __cmpD5(self, params):
         address = self.__getZeroPageXAddress(params)
-        self.__cmp(self.memory[address])
+        self.__cmp(self.memoryRead(address))
         
     # absolute
     def __cmpCD(self, params):
         address = self.__getAbsoluteAddress(params)
-        self.__cmp(self.memory[address])
+        self.__cmp(self.memoryRead(address))
         
     # absolute x
     def __cmpDD(self, params):
         address = self.__getAbsoluteXAddress(params)
-        self.__cmp(self.memory[address])
+        self.__cmp(self.memoryRead(address))
         
     # absolute y
     def __cmpD9(self, params):
         address = self.__getAbsoluteYAddress(params)
-        self.__cmp(self.memory[address])
+        self.__cmp(self.memoryRead(address))
     
     # indirect x
     def __cmpC1(self, params):
         address = self.__getIndirectXAddress(params)
-        self.__cmp(self.memory[address])
+        self.__cmp(self.memoryRead(address))
     
     # indirect y
     def __cmpD1(self, params):
         address = self.__getIndirectYAddress(params)
-        self.__cmp(self.memory[address])
+        self.__cmp(self.memoryRead(address))
     
     # CPX: Compare Memory and Index X
     # immediate
@@ -649,12 +681,12 @@ class dm6502:
     # zeropage
     def __cpxE4(self, params):
         address = self.__getZeroPageAddress(params)
-        self.__cmp(self.memory[address], self.x)
+        self.__cmp(self.memoryRead(address), self.x)
     
     # absolute
     def __cpxEC(self, params):
         address = self.__getAbsoluteAddress(params)
-        self.__cmp(self.memory[address], self.x)
+        self.__cmp(self.memoryRead(address), self.x)
     
     # CPX: Compare Memory and Index Y
     # immediate
@@ -664,21 +696,24 @@ class dm6502:
     # zeropage
     def __cpyC4(self, params):
         address = self.__getZeroPageAddress(params)
-        self.__cmp(self.memory[address], self.y)
+        self.__cmp(self.memoryRead(address), self.y)
     
     # absolute
     def __cpyCC(self, params):
         address = self.__getAbsoluteAddress(params)
-        self.__cmp(self.memory[address], self.y)
+        self.__cmp(self.memoryRead(address), self.y)
         
     # DEC: Decrement Memory by One
     def __dec(self, address):
         self.log(f"dec {address}", 5)
-        self.memory[address] -= 1
-        self.memory[address] &= 0xFF
+        
+        # self.memory[address] -= 1
+        # self.memory[address] &= 0xFF        
+        self.memoryWrite(address, (self.memoryRead(address) - 1) & 0xFF)
+        
         # update flags
-        self.srFlagSet('z', self.memory[address] == 0)
-        self.srFlagSet('n', bool((self.memory[address] >> 7) & 1))
+        self.srFlagSet('z', self.memoryRead(address) == 0)
+        self.srFlagSet('n', bool((self.memoryRead(address) >> 7) & 1))
         
     # zeropage
     def __decC6(self, params):
@@ -733,46 +768,47 @@ class dm6502:
     # zeropage
     def __eor45(self, params):
         address = self.__getZeroPageAddress(params)
-        self.__eor(self.memory[address])
+        self.__eor(self.memoryRead(address))
         
     # zeropage x
     def __eor55(self, params):
         address = self.__getZeroPageXAddress(params)
-        self.__eor(self.memory[address])
+        self.__eor(self.memoryRead(address))
         
     # absolute
     def __eor4D(self, params):
         address = self.__getAbsoluteAddress(params)
-        self.__eor(self.memory[address])
+        self.__eor(self.memoryRead(address))
         
     # absolute x
     def __eor5D(self, params):
         address = self.__getAbsoluteXAddress(params)
-        self.__eor(self.memory[address])
+        self.__eor(self.memoryRead(address))
         
     # absolute y
     def __eor59(self, params):
         address = self.__getAbsoluteYAddress(params)
-        self.__eor(self.memory[address])
+        self.__eor(self.memoryRead(address))
         
     # indirect x
     def __eor41(self, params):
         address = self.__getIndirectXAddress(params)
-        self.__eor(self.memory[address])
+        self.__eor(self.memoryRead(address))
         
     # indirect y
     def __eor51(self, params):
         address = self.__getIndirectYAddress(params)
-        self.__eor(self.memory[address])
+        self.__eor(self.memoryRead(address))
         
     # INC: Incrament Memory by One
     def __inc(self, address):
         self.log(f"inc {address}", 5)
-        self.memory[address] += 1
-        self.memory[address] &= 0xFF
+        # self.memory[address] += 1
+        # self.memory[address] &= 0xFF
+        self.memoryWrite(address, (self.memoryRead(address) + 1) & 0xFF)
         # update flags
-        self.srFlagSet('z', self.memory[address] == 0)
-        self.srFlagSet('n', bool((self.memory[address] >> 7) & 1))
+        self.srFlagSet('z', self.memoryRead(address) == 0)
+        self.srFlagSet('n', bool((self.memoryRead(address) >> 7) & 1))
         
     # zeropage
     def __incE6(self, params):
@@ -845,7 +881,7 @@ class dm6502:
         self.a = memory
         # set flags
         self.srFlagSet('z', memory == 0)
-        self.srFlagSet('n', bool((self.memory >> 7) & 1))
+        self.srFlagSet('n', bool((memory >> 7) & 1))
         
     # immediate
     def __ldaA9(self, params):
@@ -854,38 +890,38 @@ class dm6502:
     # zeropage
     def __ldaA5(self, params):
         address = self.__getZeroPageAddress(params)
-        self.__lda(self.memory[address])
+        self.__lda(self.memoryRead(address))
     
     # zeropage x
     def __ldaB5(self, params):
         address = self.__getZeroPageXAddress(params)
-        self.__lda(self.memory[address])
+        self.__lda(self.memoryRead(address))
     
     # absolute
     def __ldaAD(self, params):
         address = self.__getAbsoluteAddress(params)
-        self.__lda(self.memory[address])
+        self.__lda(self.memoryRead(address))
         
     # absolute x
     def __ldaBD(self, params):
         address = self.__getAbsoluteXAddress(params)
-        self.__lda(self.memory[address])
+        self.__lda(self.memoryRead(address))
 
     # absolute y
     def __ldaB9(self, params):
         address = self.__getAbsoluteYAddress(params)
-        self.__lda(self.memory[address])
+        self.__lda(self.memoryRead(address))
     
     # indirect x
     def __ldaA1(self, params):
         address = self.__getIndirectXAddress(params)
-        self.__lda(self.memory[address])
+        self.__lda(self.memoryRead(address))
 
     # indirect y
     def __ldaB1(self, params):
         # val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)
         address = self.__getIndirectYAddress(params)
-        self.__lda(self.memory[address])
+        self.__lda(self.memoryRead(address))
         
     # LDX: Load Index X with Memory
     def __ldx(self, memory):
@@ -902,22 +938,22 @@ class dm6502:
     # zeropage
     def __ldxA6(self, params):
         address = self.__getZeroPageAddress(params)
-        self.__ldx(self.memory[address])
+        self.__ldx(self.memoryRead(address))
         
     # zeropage y
     def __ldxB6(self, params):
         address = self.__getZeroPageYAddress(params)
-        self.__ldx(self.memory[address])
+        self.__ldx(self.memoryRead(address))
     
     # absolute
     def __ldxAE(self, params):
         address = self.__getAbsoluteAddress(params)
-        self.__ldx(self.memory[address])
+        self.__ldx(self.memoryRead(address))
     
     # absolute y
     def __ldxBE(self, params):
         address = self.__getAbsoluteYAddress(params)
-        self.__ldx(self.memory[address])
+        self.__ldx(self.memoryRead(address))
     
     # LDY: Load Index Y with Memory
     def __ldy(self, memory):
@@ -934,32 +970,33 @@ class dm6502:
     # zeropage
     def __ldyA4(self, params):
         address = self.__getZeroPageAddress(params)
-        self.__ldy(self.memory[address])
+        self.__ldy(self.memoryRead(address))
         
     # zeropage x
     def __ldyB4(self, params):
         address = self.__getZeroPageXAddress(params)
-        self.__ldy(self.memory[address])
+        self.__ldy(self.memoryRead(address))
     
     # absolute
     def __ldyAC(self, params):
         address = self.__getAbsoluteAddress(params)
-        self.__ldy(self.memory[address])
+        self.__ldy(self.memoryRead(address))
     
     # absolute x
     def __ldyBC(self, params):
         address = self.__getAbsoluteXAddress(params)
-        self.__ldy(self.memory[address])
+        self.__ldy(self.memoryRead(address))
     
     # LSR: Shift One Bit Right (Memory or Accumulator)
     def __lsr(self, address):
         self.log(f"lsr {address}", 5)
-        old = self.memory[address]
-        self.memory[address] = self.memory[address] >> 1
+        old = self.memoryRead(address)
+        # self.memory[address] = self.memory[address] >> 1
+        self.memoryWrite(address, self.memoryRead(address) >> 1)
         # set status flags
         self.srFlagSet('c', bool(old & 1))
         self.srFlagSet('n', False)
-        self.srFlagSet('z', self.memory[address] == 0)
+        self.srFlagSet('z', self.memoryRead(address) == 0)
         
     # accumulator
     def __lsr4A(self, params):
@@ -1010,37 +1047,37 @@ class dm6502:
     # zeropage
     def __ora05(self, params):
         address = self.__getZeroPageAddress(params)
-        self.__ora(self.memory[address])
+        self.__ora(self.memoryRead(address))
         
     # zeropage x
     def __ora15(self, params):
         address = self.__getZeroPageXAddress(params)
-        self.__ora(self.memory[address])
+        self.__ora(self.memoryRead(address))
         
     # absolute
     def __ora0D(self, params):
         address = self.__getAbsoluteAddress(params)
-        self.__ora(self.memory[address])
+        self.__ora(self.memoryRead(address))
         
     # absolute x
     def __ora1D(self, params):
         address = self.__getAbsoluteXAddress(params)
-        self.__ora(self.memory[address])
+        self.__ora(self.memoryRead(address))
         
     # absolute y
     def __ora19(self, params):
         address = self.__getAbsoluteYAddress(params)
-        self.__ora(self.memory[address])
+        self.__ora(self.memoryRead(address))
         
     # indirect x
     def __ora01(self, params):
         address = self.__getIndirectXAddress(params)
-        self.__ora(self.memory[address])
+        self.__ora(self.memoryRead(address))
     
     # indirect y
     def __ora11(self, params):
         address = self.__getIndirectYAddress(params)
-        self.__ora(self.memory[address])
+        self.__ora(self.memoryRead(address))
     
     # PHA: Push Accumulator on Stack
     def __pha(self, params):
@@ -1073,13 +1110,15 @@ class dm6502:
     def __rol(self, address):
         # Move each of the bits in either A or M one place to the left. Bit 0 is filled with the current value of the carry flag whilst the old bit 7 becomes the new carry flag value.
         self.log(f"rol {address}")
-        old = self.memory[address]
-        self.memory[address] = self.memory[address] << 1 # Move each of the bits in either A or M one place to the left
-        self.memory[address] |= int(self.srFlagGet('c')) # Bit 0 is filled with the current value of the carry flag
+        old = self.memoryRead(address)
+        # self.memory[address] = self.memory[address] << 1 # Move each of the bits in either A or M one place to the left
+        # self.memory[address] |= int(self.srFlagGet('c')) # Bit 0 is filled with the current value of the carry flag
+        self.memoryWrite(address, self.memoryRead(address) << 1) # Move each of the bits in either A or M one place to the left
+        self.memoryWrite(address, self.memoryRead(address) | int(self.srFlagGet('c'))) # Bit 0 is filled with the current value of the carry flag
         # set all da flags
         self.srFlagSet('c', bool((old >> 7) & 1)) # the old bit 7 becomes the new carry flag value
-        self.srFlagSet('z', self.memory[address] == 0)
-        self.srFlagSet('n', bool((self.memory[address] >> 7) & 1))
+        self.srFlagSet('z', self.memoryRead(address) == 0)
+        self.srFlagSet('n', bool((self.memoryRead(address) >> 7) & 1))
     
     # accumulator
     def __rol2A(self, params):
@@ -1117,20 +1156,23 @@ class dm6502:
     def __ror(self, address):
         # Move each of the bits in either A or M one place to the right. Bit 7 is filled with the current value of the carry flag whilst the old bit 0 becomes the new carry flag value. 
         self.log(f"rol {address}")
-        old = self.memory[address]
-        self.memory[address] = self.memory[address] << 1 # Move each of the bits in either A or M one place to the right
-        self.memory[address] |= ((int(self.srFlagGet('c'))) << 7) # Bit 7 is filled with the current value of the carry flag
+        old = self.memoryRead(address)
+        # self.memory[address] = self.memory[address] >> 1 # Move each of the bits in either A or M one place to the right
+        # self.memory[address] |= ((int(self.srFlagGet('c'))) << 7) # Bit 7 is filled with the current value of the carry flag
+        self.memoryWrite(address, self.memoryRead(address) >> 1) # Move each of the bits in either A or M one place to the right
+        self.memoryWrite(address, self.memoryRead(address) | ((int(self.srFlagGet('c'))) << 7)) # Bit 7 is filled with the current value of the carry flag
+        
         # set all da flags
         self.srFlagSet('c', bool(old & 1)) # the old bit 0 becomes the new carry flag value
-        self.srFlagSet('z', self.memory[address] == 0)
-        self.srFlagSet('n', bool((self.memory[address] >> 7) & 1))
+        self.srFlagSet('z', self.memoryRead(address) == 0)
+        self.srFlagSet('n', bool((self.memoryRead(address) >> 7) & 1))
         
     # accumulator
     def __ror6A(self, params):
         # Move each of the bits in either A or M one place to the right. Bit 7 is filled with the current value of the carry flag whilst the old bit 0 becomes the new carry flag value. 
         self.log(f"ror A")
         old = self.a
-        self.a = self.a << 1 # Move each of the bits in either A or M one place to the right
+        self.a = self.a >> 1 # Move each of the bits in either A or M one place to the right
         self.a |= ((int(self.srFlagGet('c'))) << 7) # Bit 7 is filled with the current value of the carry flag
         # set all da flags
         self.srFlagSet('c', bool(old & 1)) # the old bit 0 becomes the new carry flag value
@@ -1199,37 +1241,37 @@ class dm6502:
     # zeropage
     def __sbcE5(self, params):
         address = self.__getZeroPageAddress(params)
-        self.__sbc(self.memory[address])
+        self.__sbc(self.memoryRead(address))
         
     # zeropage x
     def __sbcF5(self, params):
         address = self.__getZeroPageXAddress(params)
-        self.__sbc(self.memory[address])
+        self.__sbc(self.memoryRead(address))
     
     # absolute
     def __sbcED(self, params):
         address = self.__getAbsoluteAddress(params)
-        self.__sbc(self.memory[address])
+        self.__sbc(self.memoryRead(address))
     
     # absolute x
     def __sbcFD(self, params):
         address = self.__getAbsoluteXAddress(params)
-        self.__sbc(self.memory[address])
+        self.__sbc(self.memoryRead(address))
         
     # absolute y
     def __sbcF9(self, params):
         address = self.__getAbsoluteYAddress(params)
-        self.__sbc(self.memory[address])
+        self.__sbc(self.memoryRead(address))
         
     # indirect x
     def __sbcE1(self, params):
         address = self.__getIndirectXAddress(params)
-        self.__sbc(self.memory[address])
+        self.__sbc(self.memoryRead(address))
         
     # indirect y
     def __sbcF1(self, params):
         address = self.__getIndirectYAddress(params)
-        self.__sbc(self.memory[address])
+        self.__sbc(self.memoryRead(address))
     
     # SEC: Set Carry Flag
     def __sec(self, params):
@@ -1248,7 +1290,8 @@ class dm6502:
     
     # STA: Store Accumulator in Memory
     def __sta(self, address):
-        self.memory[address] = self.a
+        # self.memory[address] = self.a
+        self.memoryWrite(address, self.a)
         self.log(f"sta {self.a}", 5)
         
     # zeropage
@@ -1288,7 +1331,8 @@ class dm6502:
         
     # STX: Store Index X in Memory
     def __stx(self, address):
-        self.memory[address] = self.x
+        # self.memory[address] = self.x
+        self.memoryWrite(address, self.x)
         self.log(f"stx {self.x}", 5)
         
     # zeropage
@@ -1308,7 +1352,8 @@ class dm6502:
         
     # STY: Store Index Y in Memory
     def __sty(self, address):
-        self.memory[address] = self.y
+        # self.memory[address] = self.y
+        self.memoryWrite(address, self.y)
         self.log(f"sty {self.y}", 5)
     
     # zeropage
