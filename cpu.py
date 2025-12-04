@@ -319,10 +319,10 @@ class dm6502:
         self.sp &= 0xFF
     
     def stackPull(self):
-        retVal = self.memoryRead(self.sp + 0x100)
         self.sp += 1
         self.sp &= 0xFF
-        return retVal
+        return self.memoryRead(self.sp + 0x100)
+        # return retVal
     
     # addressing boilerplate
     # immediate - no need because it's in the params
@@ -868,14 +868,20 @@ class dm6502:
     # JSR: Jump to New Location Saving Return Address
     def __jsr(self, params):
         address = self.__getAbsoluteAddress(params)
-        self.log(f"jsr {address}", 5)
         # this is pretty much a call, pushes return address to top of stack for later
         ret = self.pc+2
+        self.log(f"jsr {hex(address)}; ret to {hex(ret)}", 5)
         hibyte = (ret >> 8) & 0xFF
         lobyte = ret & 0xFF
         self.stackPush(hibyte)
         self.stackPush(lobyte)
         self.pc = address - 3 # function size will be added to pc after exec
+        # TEMP
+        # print(self.sp)
+        # temporary = self.memory[0x100:0x200]
+        # for elem in temporary:
+        #     print(hex(elem), end=" ")
+        # raise Exception("Temporary exc")
         
     # LDA: Load Accumulator with Memory
     def __lda(self, memory):
@@ -1214,9 +1220,13 @@ class dm6502:
         
     # RTS: Return from Subroutine
     def __rts(self, params):
+        # TEMP
+        temporary = self.memory[0x100:0x200]
+        for elem in temporary:
+            print(hex(elem), end=" ")
         lobyte = self.stackPull()
         hibyte = self.stackPull()
-        self.pc = (((lobyte & 0xFF) | ((hibyte << 8) & 0xFF)) + 1) & 0xFFFF # add 1 and limit to 16 bit address space
+        self.pc = (((lobyte & 0xFF) | (hibyte << 8))) & 0xFFFF # limit to 16 bit address space
         self.log(f"rts {self.pc}", 5)
 
     

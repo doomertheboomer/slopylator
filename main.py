@@ -39,3 +39,5 @@ cpu.memory[0x8000:0x10000] = prg
 # main loop
 while True:
     cpu.fetch()
+
+    
