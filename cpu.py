@@ -1215,7 +1215,8 @@ class dm6502:
         
         # set the stuff
         self.sr |= flags
-        self.pc = (lobyte & 0xFF) | ((hibyte << 8) & 0xFF)
+        # self.pc = (lobyte & 0xFF) | ((hibyte << 8) & 0xFF)
+        self.pc = (((lobyte & 0xFF) | (hibyte << 8)) - 1) & 0xFFFF # limit to 16 bit address space
         self.log(f"rti {self.pc}", 5)
         
     # RTS: Return from Subroutine
