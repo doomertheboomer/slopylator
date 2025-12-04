@@ -25,3 +25,8 @@ is4Screen = bool((ctrl1 >> 3) & 1)
 prgStart = 16 + (hasTrainer * 512)
 chrStart = prgStart + (16384 * prgRom)
 
+prg = romfile[prgStart:chrStart]
+if prgRom == 1:
+    prg += prg # mirroring if only 1 rom
+chr = romfile[chrStart:]
+
