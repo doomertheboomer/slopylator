@@ -632,7 +632,7 @@ class dm6502:
             register = self.a
         result = (register - memory) & 0xFF # no idea if this should wraparound or not
         # set flags
-        self.srFlagSet('c', self.a >= self.memory)
+        self.srFlagSet('c', self.a >= memory)
         self.srFlagSet('z', self.a == memory)
         self.srFlagSet('n', bool((result >> 7) & 1))
     
@@ -969,7 +969,7 @@ class dm6502:
         self.y = memory
         # set flags
         self.srFlagSet('z', memory == 0)
-        self.srFlagSet('n', bool((self.memory >> 7) & 1))
+        self.srFlagSet('n', bool((memory >> 7) & 1))
     
     # immediate
     def __ldyA0(self, params):
