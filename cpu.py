@@ -281,6 +281,7 @@ class dm6502:
             # TODO: cycle handling
         else:
             self.log(f"Illegal instruction! {hex(opcode)} params: {len(params)}", 2)
+            raise Exception("Illegal")
     
     def toSign8(self, val):
         sign = (val >> 7) & 1
@@ -866,8 +867,8 @@ class dm6502:
         
     # JSR: Jump to New Location Saving Return Address
     def __jsr(self, params):
-        self.log(f"jsr {address}", 5)
         address = self.__getAbsoluteAddress(params)
+        self.log(f"jsr {address}", 5)
         # this is pretty much a call, pushes return address to top of stack for later
         ret = self.pc+2
         hibyte = (ret >> 8) & 0xFF
@@ -930,7 +931,7 @@ class dm6502:
         self.x = memory
         # set flags
         self.srFlagSet('z', memory == 0)
-        self.srFlagSet('n', bool((self.memory >> 7) & 1))
+        self.srFlagSet('n', bool((memory >> 7) & 1))
     
     # immediate
     def __ldxA2(self, params):
