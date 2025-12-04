@@ -6,7 +6,7 @@ from cpu import *
 from ppu import *
 
 # this is the bus i guess
-cpu = dm6502() # has ram mirrored by bus (done inside the obj)
+cpu = dm6502(5) # has ram mirrored by bus (done inside the obj)
 ppu = dmppu() # has its own ram too
 
 # load the rom
@@ -28,5 +28,14 @@ chrStart = prgStart + (16384 * prgRom)
 prg = romfile[prgStart:chrStart]
 if prgRom == 1:
     prg += prg # mirroring if only 1 rom
-chr = romfile[chrStart:]
 
+chr = romfile[chrStart:chrStart+8192] # best if i limit this for sanity
+
+# load prgrom into cpu
+cpu.memory[0x8000:0x10000] = prg
+
+# TODO: load chrrom into ppu
+
+# main loop
+while True:
+    cpu.fetch()

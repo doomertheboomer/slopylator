@@ -8,7 +8,7 @@ class dm6502:
         self.x = 0  # x register
         self.y = 0  # y register
         # special registers
-        self.pc = 0 # program counter
+        self.pc = 0xC000 # program counter
         self.sp = 0xFF # stack pointer
         self.sr = 0 # status register
         self.__srFlags = {
@@ -224,7 +224,7 @@ class dm6502:
     def log(self, *args):
         level = args[-1]
         va_list = args[0:-1]
-        if (self.loglevel <= level):
+        if (self.loglevel >= level):
             print("[cpu]",self.loglevels[level], *va_list)
     
     # address mirroring logic
@@ -248,10 +248,10 @@ class dm6502:
             retVal = []
             for i in range(address, end):
                 fixAddy = self.getMemAddy(i)
-                retVal.append(self.memory[i])
-                return retVal
+                retVal.append(self.memory[fixAddy])
         else:
             return self.memory[fixAddy]
+        return retVal
     
     def memoryWrite(self, address, value):
         fixAddy = self.getMemAddy(address)
@@ -260,6 +260,7 @@ class dm6502:
     def fetch(self, pc = None):
         if pc == None:
             pc = self.pc # cannot access self as default val i hate you python
+            self.log(f"pc = {hex(self.pc)}", 5)
         
         opcode = self.memoryRead(pc)
         params = []
@@ -279,7 +280,7 @@ class dm6502:
             self.pc += self.__opcodes[opcode][1]
             # TODO: cycle handling
         else:
-            self.log(f"Illegal instruction! {hex(opcode)} {len(params)}", 2)
+            self.log(f"Illegal instruction! {hex(opcode)} params: {len(params)}", 2)
     
     def toSign8(self, val):
         sign = (val >> 7) & 1
@@ -850,7 +851,7 @@ class dm6502:
         
     # JMP: Jump to New Location
     def __jmp(self, address):
-        self.log(f"jmp {address}")
+        self.log(f"jmp {address}", 5)
         self.pc = address - 3 # function size will be added to pc after exec
     
     # absolute
@@ -865,7 +866,7 @@ class dm6502:
         
     # JSR: Jump to New Location Saving Return Address
     def __jsr(self, params):
-        self.log(f"jsr {address}")
+        self.log(f"jsr {address}", 5)
         address = self.__getAbsoluteAddress(params)
         # this is pretty much a call, pushes return address to top of stack for later
         ret = self.pc+2
@@ -1109,7 +1110,7 @@ class dm6502:
     # ROL: Rotate One Bit Left (Memory or Accumulator)
     def __rol(self, address):
         # Move each of the bits in either A or M one place to the left. Bit 0 is filled with the current value of the carry flag whilst the old bit 7 becomes the new carry flag value.
-        self.log(f"rol {address}")
+        self.log(f"rol {address}", 5)
         old = self.memoryRead(address)
         # self.memory[address] = self.memory[address] << 1 # Move each of the bits in either A or M one place to the left
         # self.memory[address] |= int(self.srFlagGet('c')) # Bit 0 is filled with the current value of the carry flag
@@ -1123,7 +1124,7 @@ class dm6502:
     # accumulator
     def __rol2A(self, params):
         # Move each of the bits in either A or M one place to the left. Bit 0 is filled with the current value of the carry flag whilst the old bit 7 becomes the new carry flag value.
-        self.log(f"rol A")
+        self.log(f"rol A", 5)
         old = self.a
         self.a = self.a << 1 # Move each of the bits in either A or M one place to the left
         self.a |= int(self.srFlagGet('c')) # Bit 0 is filled with the current value of the carry flag
@@ -1155,7 +1156,7 @@ class dm6502:
     # ROL: Rotate Right Bit Left (Memory or Accumulator)
     def __ror(self, address):
         # Move each of the bits in either A or M one place to the right. Bit 7 is filled with the current value of the carry flag whilst the old bit 0 becomes the new carry flag value. 
-        self.log(f"rol {address}")
+        self.log(f"rol {address}", 5)
         old = self.memoryRead(address)
         # self.memory[address] = self.memory[address] >> 1 # Move each of the bits in either A or M one place to the right
         # self.memory[address] |= ((int(self.srFlagGet('c'))) << 7) # Bit 7 is filled with the current value of the carry flag
@@ -1170,7 +1171,7 @@ class dm6502:
     # accumulator
     def __ror6A(self, params):
         # Move each of the bits in either A or M one place to the right. Bit 7 is filled with the current value of the carry flag whilst the old bit 0 becomes the new carry flag value. 
-        self.log(f"ror A")
+        self.log(f"ror A", 5)
         old = self.a
         self.a = self.a >> 1 # Move each of the bits in either A or M one place to the right
         self.a |= ((int(self.srFlagGet('c'))) << 7) # Bit 7 is filled with the current value of the carry flag
