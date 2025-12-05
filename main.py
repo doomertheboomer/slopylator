@@ -9,8 +9,10 @@ from ppu import *
 cpu = dm6502(5) # has ram mirrored by bus (done inside the obj)
 ppu = dmppu() # has its own ram too
 
+filename = input("Enter the romfile name: ")
+
 # load the rom
-with open("rom.nes", "rb") as file:
+with open(filename, "rb") as file:
     romfile = list(file.read())
 prgRom = romfile[4] # number of code banks (*16kb)
 chrRom = romfile[5] # number of graphics banks (*8kb)
@@ -33,14 +35,19 @@ chr = romfile[chrStart:chrStart+8192] # best if i limit this for sanity
 
 # load prgrom into cpu
 cpu.memory[0x8000:0x10000] = prg
-cpu.pc = 0xC000 # TEMP
+cpu.pc = cpu.getIndirectAddress([0xfc, 0xff]) # needs to point to reset vector
+print(f"Program ROM loaded at entrypoint {hex(cpu.pc)}")
 
 # TODO: load chrrom into ppu
 
-
-breakpoint = 0xff300
+breakpoint = 0xc7ab
+stepping = False
 # main loop
 while True:
     cpu.fetch()
+    if stepping:
+        input()
+        print(f"A {hex(cpu.a)} X {hex(cpu.x)} Y {hex(cpu.y)} SR {hex(cpu.sr)} SP {hex(cpu.sp)}")
     if (cpu.pc == breakpoint):
-        raise Exception(f"Breakpoint hit! A {hex(cpu.a)} X {hex(cpu.x)} Y {hex(cpu.y)} SR {hex(cpu.sr)} SP {hex(cpu.sp)}")
+        print(f"Breakpoint hit! A {hex(cpu.a)} X {hex(cpu.x)} Y {hex(cpu.y)} SR {hex(cpu.sr)} SP {hex(cpu.sp)}")
+        stepping = True

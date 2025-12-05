@@ -10,7 +10,7 @@ class dm6502:
         # special registers
         self.pc = 0x0000 # program counter
         self.sp = 0xFD # stack pointer
-        self.sr = 0b00100100 # status register
+        self.sr = 0b00110100 # status register
         self.__srFlags = {
             'n': 7,
             'v': 6,
@@ -265,7 +265,7 @@ class dm6502:
     def fetch(self, pc = None):
         if pc == None:
             pc = self.pc # cannot access self as default val i hate you python
-            self.log(f"pc = {hex(self.pc)}", 5)
+            self.log(f"pc = {hex(self.pc)} ins = {hex(self.memoryRead(self.pc))}", 5)
         
         opcode = self.memoryRead(pc)
         params = []
@@ -334,25 +334,25 @@ class dm6502:
     # accumulator - no need because it's a register
     # relative - no need because it's in the params
     # zeropage
-    def __getZeroPageAddress(self, param):
+    def getZeroPageAddress(self, param):
         return param[0] & 0xFF # kinda redundant but guess i'll include it here
     # zeropage x
-    def __getZeroPageXAddress(self, param):
+    def getZeroPageXAddress(self, param):
         return (param[0] + self.x) & 0xFF
     # zeropage y
-    def __getZeroPageYAddress(self, param):
+    def getZeroPageYAddress(self, param):
         return (param[0] + self.y) & 0xFF
     # absolute
-    def __getAbsoluteAddress(self, param):
+    def getAbsoluteAddress(self, param):
         return ((param[1] << 8) | param[0]) & 0xFFFF
     # absolute x
-    def __getAbsoluteXAddress(self, param):
+    def getAbsoluteXAddress(self, param):
         return (((param[1] << 8) | param[0]) + self.x) & 0xFFFF # no idea if i should & that or not
     # absolute y
-    def __getAbsoluteYAddress(self, param):
+    def getAbsoluteYAddress(self, param):
         return (((param[1] << 8) | param[0]) + self.y) & 0xFFFF # no idea if i should & that or not
     # indirect
-    def __getIndirectAddress(self, param):
+    def getIndirectAddress(self, param):
         lobyte = param[0] & 0xFF # bb
         hibyte = param[1] & 0xFF # cc
         address = (hibyte << 8) | lobyte # ccbb
@@ -361,11 +361,11 @@ class dm6502:
         address2 = (hibyte2 << 8) | lobyte2 # yyxx
         return address2 # set pc to this address for jmp
     # indirect x
-    def __getIndirectXAddress(self, param):
+    def getIndirectXAddress(self, param):
         # val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)
         return (self.memoryRead((param[0] + self.x) & 0xFF) + self.memoryRead((param[0] + self.x + 1) & 0xFF) * 0x100) & 0xFFFF
     # indirect y
-    def __getIndirectYAddress(self, param):
+    def getIndirectYAddress(self, param):
         # val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)
         return (self.memoryRead(param[0]) + self.memoryRead((param[0] + 1) & 0xFF) * 0x100 + self.y) & 0xFFFF
     
@@ -395,39 +395,39 @@ class dm6502:
     
     # zeropage
     def __adc65(self, params):
-        address = self.__getZeroPageAddress(params)
+        address = self.getZeroPageAddress(params)
         self.__adc(self.memoryRead(address))
     
     # zeropage x
     def __adc75(self, params):
-        address = self.__getZeroPageXAddress(params)
+        address = self.getZeroPageXAddress(params)
         self.__adc(self.memoryRead(address))
     
     # absolute
     def __adc6D(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         self.__adc(self.memoryRead(address))
         
     # absolute x
     def __adc7D(self, params):
-        address = self.__getAbsoluteXAddress(params)
+        address = self.getAbsoluteXAddress(params)
         self.__adc(self.memoryRead(address))
 
     # absolute y
     def __adc79(self, params):
-        address = self.__getAbsoluteYAddress(params)
+        address = self.getAbsoluteYAddress(params)
         self.__adc(self.memoryRead(address))
     
     # indirect x
     def __adc61(self, params):
         # val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)
-        address = self.__getIndirectXAddress(params)
+        address = self.getIndirectXAddress(params)
         self.__adc(self.memoryRead(address))
 
     # indirect y
     def __adc71(self, params):
         # val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)
-        address = self.__getIndirectYAddress(params)
+        address = self.getIndirectYAddress(params)
         self.__adc(self.memoryRead(address))
     
     # AND: AND Memory with Accumulator
@@ -445,37 +445,37 @@ class dm6502:
     
     # zeropage
     def __and25(self, params):
-        address = self.__getZeroPageAddress(params)
+        address = self.getZeroPageAddress(params)
         self.__and(self.memoryRead(address))
 
     # zeropage x
     def __and35(self, params):
-        address = self.__getZeroPageXAddress(params)
+        address = self.getZeroPageXAddress(params)
         self.__and(self.memoryRead(address))
     
     # absolute
     def __and2D(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         self.__and(self.memoryRead(address))
     
     # absolute x
     def __and3D(self, params):
-        address = self.__getAbsoluteXAddress(params)
+        address = self.getAbsoluteXAddress(params)
         self.__and(self.memoryRead(address))
 
     # absolute y
     def __and39(self, params):
-        address = self.__getAbsoluteYAddress(params)
+        address = self.getAbsoluteYAddress(params)
         self.__and(self.memoryRead(address))
     
     # indirect x
     def __and21(self, params):
-        address = self.__getIndirectXAddress(params)
+        address = self.getIndirectXAddress(params)
         self.__and(self.memoryRead(address))
     
     # indirect y
     def __and31(self, params):
-        address = self.__getIndirectYAddress(params)
+        address = self.getIndirectYAddress(params)
         self.__and(self.memoryRead(address))
     
     # ASL: Shift Left One Bit (Memory or Accumulator)
@@ -500,28 +500,29 @@ class dm6502:
         
     # zeropage
     def __asl06(self, params):
-        address = self.__getZeroPageAddress(params)
+        address = self.getZeroPageAddress(params)
         self.__asl(address)
     
     # zeropage x
     def __asl16(self, params):
-        address = self.__getZeroPageXAddress(params)
+        address = self.getZeroPageXAddress(params)
         self.__asl(address)
 
     # absolute
     def __asl0E(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         self.__asl(address)
     
     # absolute x
     def __asl1E(self, params):
-        address = self.__getAbsoluteXAddress(params)
+        address = self.getAbsoluteXAddress(params)
         self.__asl(address)
     
     # branch wrapper
     def __branch(self, size):
         self.pc += self.toSign8(size)
         self.pc &= 0xFFFF
+        self.log(f"branching {self.toSign8(size)} to {hex(self.pc)}", 5)
     
     # BCC: Branch on Carry Clear
     def __bcc(self, params):
@@ -544,7 +545,7 @@ class dm6502:
     # BIT: Test Bits in Memory with Accumulator
     # zero page
     def __bit24(self, params):
-        address = self.__getZeroPageAddress(params)
+        address = self.getZeroPageAddress(params)
         result = self.a & self.memoryRead(address)
         self.log(f"bit {result}", 5)
 
@@ -555,7 +556,7 @@ class dm6502:
         self.srFlagSet('n', bool((self.memoryRead(address) >> 7) & 1))
         
     def __bit2C(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         result = self.a & self.memoryRead(address)
         self.log(f"bit {result}", 5)
 
@@ -615,18 +616,22 @@ class dm6502:
 
     # CLC: Clear Carry Flag
     def __clc(self, params):
+        self.log(f"clc", 5)
         self.srFlagSet('c', False)
     
     # CLD: Clear Decimal Mode
     def __cld(self, params):
+        self.log(f"cld", 5)
         self.srFlagSet('d', False)
     
     # CLI: Clear Interrupt Disable Bit
     def __cli(self, params):
+        self.log(f"cli", 5)
         self.srFlagSet('i', False)
     
     # CLV: Clear Overflow Flag
     def __clv(self, params):
+        self.log(f"clv", 5)
         self.srFlagSet('v', False)
         
     # CMP: Compare Memory with Accumulator
@@ -647,37 +652,37 @@ class dm6502:
         
     # zeropage
     def __cmpC5(self, params):
-        address = self.__getZeroPageAddress(params)
+        address = self.getZeroPageAddress(params)
         self.__cmp(self.memoryRead(address))
     
     # zeropage x
     def __cmpD5(self, params):
-        address = self.__getZeroPageXAddress(params)
+        address = self.getZeroPageXAddress(params)
         self.__cmp(self.memoryRead(address))
         
     # absolute
     def __cmpCD(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         self.__cmp(self.memoryRead(address))
         
     # absolute x
     def __cmpDD(self, params):
-        address = self.__getAbsoluteXAddress(params)
+        address = self.getAbsoluteXAddress(params)
         self.__cmp(self.memoryRead(address))
         
     # absolute y
     def __cmpD9(self, params):
-        address = self.__getAbsoluteYAddress(params)
+        address = self.getAbsoluteYAddress(params)
         self.__cmp(self.memoryRead(address))
     
     # indirect x
     def __cmpC1(self, params):
-        address = self.__getIndirectXAddress(params)
+        address = self.getIndirectXAddress(params)
         self.__cmp(self.memoryRead(address))
     
     # indirect y
     def __cmpD1(self, params):
-        address = self.__getIndirectYAddress(params)
+        address = self.getIndirectYAddress(params)
         self.__cmp(self.memoryRead(address))
     
     # CPX: Compare Memory and Index X
@@ -687,12 +692,12 @@ class dm6502:
     
     # zeropage
     def __cpxE4(self, params):
-        address = self.__getZeroPageAddress(params)
+        address = self.getZeroPageAddress(params)
         self.__cmp(self.memoryRead(address), self.x)
     
     # absolute
     def __cpxEC(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         self.__cmp(self.memoryRead(address), self.x)
     
     # CPX: Compare Memory and Index Y
@@ -702,12 +707,12 @@ class dm6502:
     
     # zeropage
     def __cpyC4(self, params):
-        address = self.__getZeroPageAddress(params)
+        address = self.getZeroPageAddress(params)
         self.__cmp(self.memoryRead(address), self.y)
     
     # absolute
     def __cpyCC(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         self.__cmp(self.memoryRead(address), self.y)
         
     # DEC: Decrement Memory by One
@@ -724,22 +729,22 @@ class dm6502:
         
     # zeropage
     def __decC6(self, params):
-        address = self.__getZeroPageAddress(params)
+        address = self.getZeroPageAddress(params)
         self.__dec(address)
         
     # zeropage x
     def __decD6(self, params):
-        address = self.__getZeroPageXAddress(params)
+        address = self.getZeroPageXAddress(params)
         self.__dec(address)
         
     # absolute
     def __decCE(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         self.__dec(address)
         
     # absolute x
     def __decDE(self, params):
-        address = self.__getAbsoluteXAddress(params)
+        address = self.getAbsoluteXAddress(params)
         self.__dec(address)
     
     # DEX: Decrement Index X by One
@@ -774,37 +779,37 @@ class dm6502:
         
     # zeropage
     def __eor45(self, params):
-        address = self.__getZeroPageAddress(params)
+        address = self.getZeroPageAddress(params)
         self.__eor(self.memoryRead(address))
         
     # zeropage x
     def __eor55(self, params):
-        address = self.__getZeroPageXAddress(params)
+        address = self.getZeroPageXAddress(params)
         self.__eor(self.memoryRead(address))
         
     # absolute
     def __eor4D(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         self.__eor(self.memoryRead(address))
         
     # absolute x
     def __eor5D(self, params):
-        address = self.__getAbsoluteXAddress(params)
+        address = self.getAbsoluteXAddress(params)
         self.__eor(self.memoryRead(address))
         
     # absolute y
     def __eor59(self, params):
-        address = self.__getAbsoluteYAddress(params)
+        address = self.getAbsoluteYAddress(params)
         self.__eor(self.memoryRead(address))
         
     # indirect x
     def __eor41(self, params):
-        address = self.__getIndirectXAddress(params)
+        address = self.getIndirectXAddress(params)
         self.__eor(self.memoryRead(address))
         
     # indirect y
     def __eor51(self, params):
-        address = self.__getIndirectYAddress(params)
+        address = self.getIndirectYAddress(params)
         self.__eor(self.memoryRead(address))
         
     # INC: Incrament Memory by One
@@ -819,22 +824,22 @@ class dm6502:
         
     # zeropage
     def __incE6(self, params):
-        address = self.__getZeroPageAddress(params)
+        address = self.getZeroPageAddress(params)
         self.__inc(address)
         
     # zeropage x
     def __incF6(self, params):
-        address = self.__getZeroPageXAddress(params)
+        address = self.getZeroPageXAddress(params)
         self.__inc(address)
         
     # absolute
     def __incEE(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         self.__inc(address)
         
     # absolute x
     def __incFE(self, params):
-        address = self.__getAbsoluteXAddress(params)
+        address = self.getAbsoluteXAddress(params)
         self.__inc(address)
     
     # INX: Increment Index X by One
@@ -862,7 +867,7 @@ class dm6502:
     
     # absolute
     def __jmp4C(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         self.__jmp(address)
         
     # indirect
@@ -871,12 +876,12 @@ class dm6502:
         if params[0] == 0xFF: # crossing a page
             params[1] = (params[1] - 1) & 0xFF # restore to previous page
         
-        address = self.__getIndirectAddress(params)
+        address = self.getIndirectAddress(params)
         self.__jmp(address)
         
     # JSR: Jump to New Location Saving Return Address
     def __jsr(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         # this is pretty much a call, pushes return address to top of stack for later
         ret = self.pc+2
         self.log(f"jsr {hex(address)}; ret to {hex(ret)}", 5)
@@ -900,38 +905,38 @@ class dm6502:
     
     # zeropage
     def __ldaA5(self, params):
-        address = self.__getZeroPageAddress(params)
+        address = self.getZeroPageAddress(params)
         self.__lda(self.memoryRead(address))
     
     # zeropage x
     def __ldaB5(self, params):
-        address = self.__getZeroPageXAddress(params)
+        address = self.getZeroPageXAddress(params)
         self.__lda(self.memoryRead(address))
     
     # absolute
     def __ldaAD(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         self.__lda(self.memoryRead(address))
         
     # absolute x
     def __ldaBD(self, params):
-        address = self.__getAbsoluteXAddress(params)
+        address = self.getAbsoluteXAddress(params)
         self.__lda(self.memoryRead(address))
 
     # absolute y
     def __ldaB9(self, params):
-        address = self.__getAbsoluteYAddress(params)
+        address = self.getAbsoluteYAddress(params)
         self.__lda(self.memoryRead(address))
     
     # indirect x
     def __ldaA1(self, params):
-        address = self.__getIndirectXAddress(params)
+        address = self.getIndirectXAddress(params)
         self.__lda(self.memoryRead(address))
 
     # indirect y
     def __ldaB1(self, params):
         # val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)
-        address = self.__getIndirectYAddress(params)
+        address = self.getIndirectYAddress(params)
         self.__lda(self.memoryRead(address))
                 
     # LDX: Load Index X with Memory
@@ -948,22 +953,22 @@ class dm6502:
     
     # zeropage
     def __ldxA6(self, params):
-        address = self.__getZeroPageAddress(params)
+        address = self.getZeroPageAddress(params)
         self.__ldx(self.memoryRead(address))
         
     # zeropage y
     def __ldxB6(self, params):
-        address = self.__getZeroPageYAddress(params)
+        address = self.getZeroPageYAddress(params)
         self.__ldx(self.memoryRead(address))
     
     # absolute
     def __ldxAE(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         self.__ldx(self.memoryRead(address))
     
     # absolute y
     def __ldxBE(self, params):
-        address = self.__getAbsoluteYAddress(params)
+        address = self.getAbsoluteYAddress(params)
         self.__ldx(self.memoryRead(address))
     
     # LDY: Load Index Y with Memory
@@ -980,22 +985,22 @@ class dm6502:
     
     # zeropage
     def __ldyA4(self, params):
-        address = self.__getZeroPageAddress(params)
+        address = self.getZeroPageAddress(params)
         self.__ldy(self.memoryRead(address))
         
     # zeropage x
     def __ldyB4(self, params):
-        address = self.__getZeroPageXAddress(params)
+        address = self.getZeroPageXAddress(params)
         self.__ldy(self.memoryRead(address))
     
     # absolute
     def __ldyAC(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         self.__ldy(self.memoryRead(address))
     
     # absolute x
     def __ldyBC(self, params):
-        address = self.__getAbsoluteXAddress(params)
+        address = self.getAbsoluteXAddress(params)
         self.__ldy(self.memoryRead(address))
     
     # LSR: Shift One Bit Right (Memory or Accumulator)
@@ -1021,22 +1026,22 @@ class dm6502:
         
     # zeropage
     def __lsr46(self, params):
-        address = self.__getZeroPageAddress(params)
+        address = self.getZeroPageAddress(params)
         self.__lsr(address)
         
     # zeropage x
     def __lsr56(self, params):
-        address = self.__getZeroPageXAddress(params)
+        address = self.getZeroPageXAddress(params)
         self.__lsr(address)
     
     # absolute
     def __lsr4E(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         self.__lsr(address)
     
     # absolute x
     def __lsr5E(self, params):
-        address = self.__getAbsoluteXAddress(params)
+        address = self.getAbsoluteXAddress(params)
         self.__lsr(address)
     
     # NOP: No Operation
@@ -1057,37 +1062,37 @@ class dm6502:
         
     # zeropage
     def __ora05(self, params):
-        address = self.__getZeroPageAddress(params)
+        address = self.getZeroPageAddress(params)
         self.__ora(self.memoryRead(address))
         
     # zeropage x
     def __ora15(self, params):
-        address = self.__getZeroPageXAddress(params)
+        address = self.getZeroPageXAddress(params)
         self.__ora(self.memoryRead(address))
         
     # absolute
     def __ora0D(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         self.__ora(self.memoryRead(address))
         
     # absolute x
     def __ora1D(self, params):
-        address = self.__getAbsoluteXAddress(params)
+        address = self.getAbsoluteXAddress(params)
         self.__ora(self.memoryRead(address))
         
     # absolute y
     def __ora19(self, params):
-        address = self.__getAbsoluteYAddress(params)
+        address = self.getAbsoluteYAddress(params)
         self.__ora(self.memoryRead(address))
         
     # indirect x
     def __ora01(self, params):
-        address = self.__getIndirectXAddress(params)
+        address = self.getIndirectXAddress(params)
         self.__ora(self.memoryRead(address))
     
     # indirect y
     def __ora11(self, params):
-        address = self.__getIndirectYAddress(params)
+        address = self.getIndirectYAddress(params)
         self.__ora(self.memoryRead(address))
     
     # PHA: Push Accumulator on Stack
@@ -1146,22 +1151,22 @@ class dm6502:
         
     # zeropage
     def __rol26(self, params):
-        addr = self.__getZeroPageAddress(params)
+        addr = self.getZeroPageAddress(params)
         self.__rol(addr)
         
     # zeropage x
     def __rol36(self, params):
-        addr = self.__getZeroPageXAddress(params)
+        addr = self.getZeroPageXAddress(params)
         self.__rol(addr)
     
     # absolute
     def __rol2E(self, params):
-        addr = self.__getAbsoluteAddress(params)
+        addr = self.getAbsoluteAddress(params)
         self.__rol(addr)
     
     # absolute x
     def __rol3E(self, params):
-        addr = self.__getAbsoluteXAddress(params)
+        addr = self.getAbsoluteXAddress(params)
         self.__rol(addr)
         
     # ROL: Rotate Right Bit Left (Memory or Accumulator)
@@ -1193,22 +1198,22 @@ class dm6502:
         
     # zeropage
     def __ror66(self, params):
-        addr = self.__getZeroPageAddress(params)
+        addr = self.getZeroPageAddress(params)
         self.__ror(addr)
     
     # zeropage x
     def __ror76(self, params):
-        addr = self.__getZeroPageXAddress(params)
+        addr = self.getZeroPageXAddress(params)
         self.__ror(addr)
     
     # absolute
     def __ror6E(self, params):
-        addr = self.__getAbsoluteAddress(params)
+        addr = self.getAbsoluteAddress(params)
         self.__ror(addr)
         
     # absolute x
     def __ror7E(self, params):
-        addr = self.__getAbsoluteXAddress(params)
+        addr = self.getAbsoluteXAddress(params)
         self.__ror(addr)
     
     # RTI: Return from Interrupt
@@ -1253,37 +1258,37 @@ class dm6502:
     
     # zeropage
     def __sbcE5(self, params):
-        address = self.__getZeroPageAddress(params)
+        address = self.getZeroPageAddress(params)
         self.__sbc(self.memoryRead(address))
         
     # zeropage x
     def __sbcF5(self, params):
-        address = self.__getZeroPageXAddress(params)
+        address = self.getZeroPageXAddress(params)
         self.__sbc(self.memoryRead(address))
     
     # absolute
     def __sbcED(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         self.__sbc(self.memoryRead(address))
     
     # absolute x
     def __sbcFD(self, params):
-        address = self.__getAbsoluteXAddress(params)
+        address = self.getAbsoluteXAddress(params)
         self.__sbc(self.memoryRead(address))
         
     # absolute y
     def __sbcF9(self, params):
-        address = self.__getAbsoluteYAddress(params)
+        address = self.getAbsoluteYAddress(params)
         self.__sbc(self.memoryRead(address))
         
     # indirect x
     def __sbcE1(self, params):
-        address = self.__getIndirectXAddress(params)
+        address = self.getIndirectXAddress(params)
         self.__sbc(self.memoryRead(address))
         
     # indirect y
     def __sbcF1(self, params):
-        address = self.__getIndirectYAddress(params)
+        address = self.getIndirectYAddress(params)
         self.__sbc(self.memoryRead(address))
     
     # SEC: Set Carry Flag
@@ -1309,37 +1314,37 @@ class dm6502:
         
     # zeropage
     def __sta85(self, params):
-        address = self.__getZeroPageAddress(params)
+        address = self.getZeroPageAddress(params)
         self.__sta(address)
     
     # zeropage x
     def __sta95(self, params):
-        address = self.__getZeroPageXAddress(params)
+        address = self.getZeroPageXAddress(params)
         self.__sta(address)
     
     # absolute
     def __sta8D(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         self.__sta(address)
         
     # absolute x
     def __sta9D(self, params):
-        address = self.__getAbsoluteXAddress(params)
+        address = self.getAbsoluteXAddress(params)
         self.__sta(address)
     
     # absolute y
     def __sta99(self, params):
-        address = self.__getAbsoluteYAddress(params)
+        address = self.getAbsoluteYAddress(params)
         self.__sta(address)
         
     # indirect x
     def __sta81(self, params):
-        address = self.__getIndirectXAddress(params)
+        address = self.getIndirectXAddress(params)
         self.__sta(address)
         
     # indirect y
     def __sta91(self, params):
-        address = self.__getIndirectYAddress(params)
+        address = self.getIndirectYAddress(params)
         self.__sta(address)
         
     # STX: Store Index X in Memory
@@ -1350,17 +1355,17 @@ class dm6502:
         
     # zeropage
     def __stx86(self, params):
-        address = self.__getZeroPageAddress(params)
+        address = self.getZeroPageAddress(params)
         self.__stx(address)
     
     # zeropage y
     def __stx96(self, params):
-        address = self.__getZeroPageYAddress(params)
+        address = self.getZeroPageYAddress(params)
         self.__stx(address)
     
     # absolute
     def __stx8E(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         self.__stx(address)
         
     # STY: Store Index Y in Memory
@@ -1371,17 +1376,17 @@ class dm6502:
     
     # zeropage
     def __sty84(self, params):
-        address = self.__getZeroPageAddress(params)
+        address = self.getZeroPageAddress(params)
         self.__sty(address)
     
     # zeropage x
     def __sty94(self, params):
-        address = self.__getZeroPageXAddress(params)
+        address = self.getZeroPageXAddress(params)
         self.__sty(address)
     
     # absolute
     def __sty8C(self, params):
-        address = self.__getAbsoluteAddress(params)
+        address = self.getAbsoluteAddress(params)
         self.__sty(address)
         
     # TAX: Transfer Accumulator to Index X
