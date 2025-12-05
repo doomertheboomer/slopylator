@@ -36,8 +36,10 @@ cpu.memory[0x8000:0x10000] = prg
 
 # TODO: load chrrom into ppu
 
+
+breakpoint = 0xD942
 # main loop
 while True:
     cpu.fetch()
-
-    
+    if (cpu.pc == breakpoint):
+        raise Exception(f"Breakpoint hit! A {hex(cpu.a)} X {hex(cpu.x)} Y {hex(cpu.y)} SR {hex(cpu.sr)} SP {hex(cpu.sp)}")

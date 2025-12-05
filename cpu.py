@@ -330,7 +330,7 @@ class dm6502:
     # relative - no need because it's in the params
     # zeropage
     def __getZeroPageAddress(self, param):
-        return param[0] # kinda redundant but guess i'll include it here
+        return param[0] & 0xFF # kinda redundant but guess i'll include it here
     # zeropage x
     def __getZeroPageXAddress(self, param):
         return (param[0] + self.x) & 0xFF
@@ -339,7 +339,7 @@ class dm6502:
         return (param[0] + self.y) & 0xFF
     # absolute
     def __getAbsoluteAddress(self, param):
-        return (param[1] << 8) | param[0]
+        return ((param[1] << 8) | param[0]) & 0xFFFF
     # absolute x
     def __getAbsoluteXAddress(self, param):
         return (((param[1] << 8) | param[0]) + self.x) & 0xFFFF # no idea if i should & that or not
@@ -348,21 +348,21 @@ class dm6502:
         return (((param[1] << 8) | param[0]) + self.y) & 0xFFFF # no idea if i should & that or not
     # indirect
     def __getIndirectAddress(self, param):
-        lobyte = param[0] # bb
-        hibyte = param[1] # cc
+        lobyte = param[0] & 0xFF # bb
+        hibyte = param[1] & 0xFF # cc
         address = (hibyte << 8) | lobyte # ccbb
-        lobyte2 = self.memoryRead(address) # xx
-        hibyte2 = self.memoryRead((address + 1) & 0xFF) # yy
+        lobyte2 = self.memoryRead(address) & 0xFF # xx
+        hibyte2 = self.memoryRead((address + 1) & 0xFF) & 0xFF # yy
         address2 = (hibyte2 << 8) | lobyte2 # yyxx
         return address2 # set pc to this address for jmp
     # indirect x
     def __getIndirectXAddress(self, param):
         # val = PEEK(PEEK((arg + X) % 256) + PEEK((arg + X + 1) % 256) * 256)
-        return self.memoryRead((param[0] + self.x) & 0xFF) + self.memoryRead((param[0] + self.x + 1) & 0xFF) * 0x100
+        return (self.memoryRead((param[0] + self.x) & 0xFF) + self.memoryRead((param[0] + self.x + 1) & 0xFF) * 0x100) & 0xFFFF
     # indirect y
     def __getIndirectYAddress(self, param):
         # val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)
-        return self.memoryRead(param[0]) + self.memoryRead((param[0] + 1) & 0xFF) * 0x100 + self.y
+        return (self.memoryRead(param[0]) + self.memoryRead((param[0] + 1) & 0xFF) * 0x100 + self.y) & 0xFFFF
     
     # ADC: Add Memory to Accumulator with Carry
     def __adc(self, amount):
@@ -876,12 +876,6 @@ class dm6502:
         self.stackPush(hibyte)
         self.stackPush(lobyte)
         self.pc = address - 3 # function size will be added to pc after exec
-        # TEMP
-        # print(self.sp)
-        # temporary = self.memory[0x100:0x200]
-        # for elem in temporary:
-        #     print(hex(elem), end=" ")
-        # raise Exception("Temporary exc")
         
     # LDA: Load Accumulator with Memory
     def __lda(self, memory):
@@ -930,7 +924,7 @@ class dm6502:
         # val = PEEK(PEEK(arg) + PEEK((arg + 1) % 256) * 256 + Y)
         address = self.__getIndirectYAddress(params)
         self.__lda(self.memoryRead(address))
-        
+                
     # LDX: Load Index X with Memory
     def __ldx(self, memory):
         self.log(f"ldx {memory}", 5)
@@ -1221,10 +1215,6 @@ class dm6502:
         
     # RTS: Return from Subroutine
     def __rts(self, params):
-        # TEMP
-        temporary = self.memory[0x100:0x200]
-        for elem in temporary:
-            print(hex(elem), end=" ")
         lobyte = self.stackPull()
         hibyte = self.stackPull()
         self.pc = (((lobyte & 0xFF) | (hibyte << 8))) & 0xFFFF # limit to 16 bit address space
