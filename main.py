@@ -1,5 +1,5 @@
 # builtin modules import
-
+import sys
 
 # my own modules import
 from cpu import *
@@ -9,7 +9,11 @@ from ppu import *
 cpu = dm6502(5) # has ram mirrored by bus (done inside the obj)
 ppu = dmppu() # has its own ram too
 
-filename = input("Enter the romfile name: ")
+# python should let this var be used out of the if block
+if len(sys.argv) == 1:
+    filename = input("Enter the romfile name: ")
+else:
+    filename = sys.argv[1]
 
 # load the rom
 with open(filename, "rb") as file:
@@ -37,10 +41,11 @@ chr = romfile[chrStart:chrStart+8192] # best if i limit this for sanity
 cpu.memory[0x8000:0x10000] = prg
 cpu.pc = cpu.getIndirectAddress([0xfc, 0xff]) # needs to point to reset vector
 print(f"Program ROM loaded at entrypoint {hex(cpu.pc)}")
+input("Press ENTER to start emulation!")
 
 # TODO: load chrrom into ppu
 
-breakpoint = 0xc7ab
+breakpoint = 0xdbb5f
 stepping = False
 # main loop
 while True:

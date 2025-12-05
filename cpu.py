@@ -234,6 +234,8 @@ class dm6502:
     
     # address mirroring logic
     def getMemAddy(self, address):
+        address &= 0xFFFF
+        
         # first mirror 0x800-0x1FFF
         if (address >= 0x800) and (address <= 0x1FFF):
             address %= 0x800
@@ -355,9 +357,17 @@ class dm6502:
     def getIndirectAddress(self, param):
         lobyte = param[0] & 0xFF # bb
         hibyte = param[1] & 0xFF # cc
+        
+        # AN INDIRECT JUMP MUST NEVER USE A VECTOR BEGINNING ON THE LAST BYTE OF A PAGE (6502 jmpbug)
         address = (hibyte << 8) | lobyte # ccbb
-        lobyte2 = self.memoryRead(address) & 0xFF # xx
-        hibyte2 = self.memoryRead((address & 0xFFFF) + 1) # yy
+        if (address & 0xFF == 0xFF):
+            self.log("jmpbug acquired!", 5)
+            lobyte2 = self.memoryRead(address) & 0xFF # xx
+            hibyte2 = self.memoryRead((address) & 0xFF00) # wraparound to page start
+        else:
+            lobyte2 = self.memoryRead(address) & 0xFF # xx
+            hibyte2 = self.memoryRead((address & 0xFFFF) + 1) # yy
+                    
         address2 = (hibyte2 << 8) | lobyte2 # yyxx
         return address2 # set pc to this address for jmp
     # indirect x
@@ -872,10 +882,6 @@ class dm6502:
         
     # indirect
     def __jmp6C(self, params):
-        # AN INDIRECT JUMP MUST NEVER USE A VECTOR BEGINNING ON THE LAST BYTE OF A PAGE (6502 jmpbug)
-        if params[0] == 0xFF: # crossing a page
-            params[1] = (params[1] - 1) & 0xFF # restore to previous page
-        
         address = self.getIndirectAddress(params)
         self.__jmp(address)
         
