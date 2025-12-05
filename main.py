@@ -38,9 +38,11 @@ cpu.pc = 0xC000 # TEMP
 # TODO: load chrrom into ppu
 
 
-breakpoint = 0xdb7b
+breakpoint = 0xff300
 # main loop
 while True:
     cpu.fetch()
     if (cpu.pc == breakpoint):
+        cpu.printStack()
+        print(cpu.memory[0x2FF:0x303])
         raise Exception(f"Breakpoint hit! A {hex(cpu.a)} X {hex(cpu.x)} Y {hex(cpu.y)} SR {hex(cpu.sr)} SP {hex(cpu.sp)}")

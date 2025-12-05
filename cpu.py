@@ -221,6 +221,11 @@ class dm6502:
         self.log("6502 CPU initialized", 3)
         pass
     
+    def printStack(self):
+        stack = self.memory[0x100:0x200]
+        for i in range(0xFF):
+            print(f"{hex(i)} {hex(stack[i])}")
+    
     def log(self, *args):
         level = args[-1]
         va_list = args[0:-1]
@@ -352,7 +357,7 @@ class dm6502:
         hibyte = param[1] & 0xFF # cc
         address = (hibyte << 8) | lobyte # ccbb
         lobyte2 = self.memoryRead(address) & 0xFF # xx
-        hibyte2 = self.memoryRead((address + 1) & 0xFF) & 0xFF # yy
+        hibyte2 = self.memoryRead((address & 0xFFFF) + 1) # yy
         address2 = (hibyte2 << 8) | lobyte2 # yyxx
         return address2 # set pc to this address for jmp
     # indirect x
@@ -367,7 +372,7 @@ class dm6502:
     # ADC: Add Memory to Accumulator with Carry
     def __adc(self, amount):
         self.log(f"adc {amount}", 5)
-        orig_a = self.a
+        orig_a = self.a + int(self.srFlagGet('c'))
         self.a += amount
     
         # set c flag and correct value
@@ -477,7 +482,7 @@ class dm6502:
     def __asl(self, address):
         old = self.memoryRead(address)
         # self.memory[address] = self.memory[address] << 1
-        self.memoryWrite(address, self.memoryRead(address) << 1)
+        self.memoryWrite(address, (self.memoryRead(address) << 1) & 0xFF) # can overflow
         # set status flags
         self.srFlagSet('c', bool((old >> 7) & 1))
         self.srFlagSet('n', bool((self.memoryRead(address) >> 7) & 1))
@@ -862,6 +867,10 @@ class dm6502:
         
     # indirect
     def __jmp6C(self, params):
+        # AN INDIRECT JUMP MUST NEVER USE A VECTOR BEGINNING ON THE LAST BYTE OF A PAGE (6502 jmpbug)
+        if params[0] == 0xFF: # crossing a page
+            params[1] = (params[1] - 1) & 0xFF # restore to previous page
+        
         address = self.__getIndirectAddress(params)
         self.__jmp(address)
         
@@ -1103,7 +1112,8 @@ class dm6502:
         
     # PLP: Pull Processor Status from Stack
     def __plp(self, params):
-        old = (self.sr & 0b00110000) # save old bits
+        # TODO: interrupt disable delayed 1 instruction
+        old = (self.sr & 0b00110000) # save only 2 old bits
         self.sr = self.stackPull() # set the status register
         self.sr |= old # restore old bits
         self.log(f"plp {self.sr}", 5)
