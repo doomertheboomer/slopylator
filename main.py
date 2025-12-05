@@ -33,11 +33,12 @@ chr = romfile[chrStart:chrStart+8192] # best if i limit this for sanity
 
 # load prgrom into cpu
 cpu.memory[0x8000:0x10000] = prg
+cpu.pc = 0xC000 # TEMP
 
 # TODO: load chrrom into ppu
 
 
-breakpoint = 0xD942
+breakpoint = 0xdb7b
 # main loop
 while True:
     cpu.fetch()

@@ -8,9 +8,9 @@ class dm6502:
         self.x = 0  # x register
         self.y = 0  # y register
         # special registers
-        self.pc = 0xC000 # program counter
-        self.sp = 0xFF # stack pointer
-        self.sr = 0 # status register
+        self.pc = 0x0000 # program counter
+        self.sp = 0xFD # stack pointer
+        self.sr = 0b00100100 # status register
         self.__srFlags = {
             'n': 7,
             'v': 6,
