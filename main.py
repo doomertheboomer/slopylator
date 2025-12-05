@@ -43,6 +43,4 @@ breakpoint = 0xff300
 while True:
     cpu.fetch()
     if (cpu.pc == breakpoint):
-        cpu.printStack()
-        print(cpu.memory[0x2FF:0x303])
         raise Exception(f"Breakpoint hit! A {hex(cpu.a)} X {hex(cpu.x)} Y {hex(cpu.y)} SR {hex(cpu.sr)} SP {hex(cpu.sp)}")
