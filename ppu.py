@@ -13,7 +13,7 @@ class dmppu:
         # read from PPU memory?
         # 2 byte internal register for addr
         self.__intlAddr = 0
-        self.__intlAddrHigh = True
+        self.__intlDataBuf = 0
         self.rambus.cpumem[0x2006] = 0 # addr
         self.rambus.cpumem[0x2007] = 0 # data
         
@@ -43,11 +43,34 @@ class dmppu:
         self.rambus.cpumem[0x2007] = self.data
         self.rambus.cpumem[0x4014] = self.oamdma
     
+    def __updateAddr(self):
+        highptr = int(self.rambus.ppuintlAddrHigh) * 8
+        
+        # reset bytes to write first
+        self.__intlAddr &= (0b1111111100000000 >> highptr) # shift right to reset high ptr, no shift to reset low ptr
+        
+        # write new bytes to high/low ptr
+        self.__ppuintlAddr |= (self.addr << highptr)
+                
     def fetch(self):
         self.readRegisters()
         
-        # TODO: do the PPU operation
+        # address bus operations
         
+        # upload current byte in header first before processing the rest
+        if self.rambus.ppu2007Read: # only update data when 2007 is read from the CPU
+            self.data = self.rambus.memoryReadPPU(self.__intlAddr)
+            
+        self.__updateAddr() # weird internal state update for addr register
+        
+        # if accessing palette data, upload immediately instead of on next cycle
+        if self.rambus.ppu2007Read:
+            if (self.__intlAddr >= 0x3F00) and (self.__intlAddr <= 0x3FFF):
+                self.data = self.rambus.memoryReadPPU(self.__intlAddr)
+            self.rambus.ppu2007Read = False
+        elif self.rambus.ppu2007Write:
+            self.rambus.memoryWritePPU(self.__intlAddr, self.data)
+            self.rambus.ppu2007Write = False
         
         self.writeRegisters()
         
