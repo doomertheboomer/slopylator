@@ -6,7 +6,48 @@ from cpu import *
 from ppu import *
 
 # this is the bus i guess
-cpu = dm6502(5) # has ram mirrored by bus (done inside the obj)
+class dmrambus:
+    def __init__(self):
+        # up to 0x10000 for both cpu and ppu
+        self.cpumem = [0] * 0x10000
+        self.ppumem = [0] * 0x10000 
+        
+    # address mirroring logic for CPU
+    def getMemAddyCPU(self, address):
+        address &= 0xFFFF
+        
+        # first mirror 0x800-0x1FFF
+        if (address >= 0x800) and (address <= 0x1FFF):
+            address %= 0x800
+            return address
+            
+        # second mirror 0x2008-0x4000
+        if (address >= 0x2008) and (address <= 0x3FFF):
+            address = ((address - 0x2000) % 0x8) + 0x2000
+            return address
+            
+        # default case
+        return address
+    
+    def memoryReadCPU(self, address, end = None):
+        fixAddy = self.getMemAddyCPU(address)
+        if end != None:
+            retVal = []
+            for i in range(address, end):
+                fixAddy = self.getMemAddyCPU(i)
+                retVal.append(self.cpumem[fixAddy])
+        else:
+            return self.cpumem[fixAddy]
+        return retVal
+    
+    def memoryWriteCPU(self, address, value):
+        fixAddy = self.getMemAddyCPU(address)
+        self.cpumem[fixAddy] = value    
+        
+    
+    
+bus = dmrambus()
+cpu = dm6502(bus, 5) # has ram mirrored by bus (done inside the obj)
 ppu = dmppu() # has its own ram too
 
 # python should let this var be used out of the if block
@@ -38,7 +79,7 @@ if prgRom == 1:
 chr = romfile[chrStart:chrStart+8192] # best if i limit this for sanity
 
 # load prgrom into cpu
-cpu.memory[0x8000:0x10000] = prg
+bus.cpumem[0x8000:0x10000] = prg
 cpu.pc = cpu.getIndirectAddress([0xfc, 0xff]) # needs to point to reset vector
 print(f"Program ROM loaded at entrypoint {hex(cpu.pc)}")
 input("Press ENTER to start emulation!")
