@@ -74,8 +74,6 @@ class dmrambus:
         fixAddy = self.getMemAddyPPU(address)
         self.ppumem[fixAddy] = value
         
-    
-    
 bus = dmrambus()
 cpu = dm6502(bus, 5) # has ram mirrored by bus
 ppu = dmppu(bus, 5) # has its own ram too
@@ -114,6 +112,7 @@ cpu.pc = cpu.getIndirectAddress([0xfc, 0xff]) # needs to point to reset vector
 print(f"Program ROM loaded with entrypoint {hex(cpu.pc)}")
 
 # TODO: load chrrom into ppu
+
 
 input("Press ENTER to start emulation!")
 

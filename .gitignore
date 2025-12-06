@@ -218,3 +218,4 @@ __marimo__/
 *.nes
 fceux/
 *.deb
+*.rs
