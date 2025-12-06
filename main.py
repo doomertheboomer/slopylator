@@ -10,7 +10,7 @@ class dmrambus:
     def __init__(self):
         # up to 0x10000 for both cpu and ppu
         self.cpumem = [0] * 0x10000
-        self.ppumem = [0] * 0x10000 
+        self.ppumem = [0] * 0x10000
         
     # address mirroring logic for CPU
     def getMemAddyCPU(self, address):
@@ -42,13 +42,43 @@ class dmrambus:
     
     def memoryWriteCPU(self, address, value):
         fixAddy = self.getMemAddyCPU(address)
-        self.cpumem[fixAddy] = value    
+        self.cpumem[fixAddy] = value
+        
+    # address mirroring logic for PPU
+    def getMemAddyPPU(self, address):
+        # mirrors are nested so better substitute high addresses for this
+        address = (address % 0x4000)
+        
+        # first mirror
+        if (address >= 0x3000) and (address <= 0x3EFF):
+            address = (address & 0x3000) + 0x2000 # only one mirror so no need to do weird things
+            return address
+        
+        # second mirror
+        if (address >= 0x3F20) and (address <= 0x3FFF):
+            address = ((address - 0x3F00) % 0x20) + 0x3F00
+            return address
+        
+    def memoryReadPPU(self, address, end = None):
+        fixAddy = self.getMemAddyPPU(address)
+        if end != None:
+            retVal = []
+            for i in range(address, end):
+                fixAddy = self.getMemAddyPPU(i)
+                retVal.append(self.ppumem[fixAddy])
+        else:
+            return self.ppumem[fixAddy]
+        return retVal
+    
+    def memoryWritePPU(self, address, value):
+        fixAddy = self.getMemAddyPPU(address)
+        self.ppumem[fixAddy] = value
         
     
     
 bus = dmrambus()
-cpu = dm6502(bus, 5) # has ram mirrored by bus (done inside the obj)
-ppu = dmppu() # has its own ram too
+cpu = dm6502(bus, 5) # has ram mirrored by bus
+ppu = dmppu(bus, 5) # has its own ram too
 
 # python should let this var be used out of the if block
 if len(sys.argv) == 1:
@@ -81,10 +111,12 @@ chr = romfile[chrStart:chrStart+8192] # best if i limit this for sanity
 # load prgrom into cpu
 bus.cpumem[0x8000:0x10000] = prg
 cpu.pc = cpu.getIndirectAddress([0xfc, 0xff]) # needs to point to reset vector
-print(f"Program ROM loaded at entrypoint {hex(cpu.pc)}")
-input("Press ENTER to start emulation!")
+print(f"Program ROM loaded with entrypoint {hex(cpu.pc)}")
 
 # TODO: load chrrom into ppu
+
+input("Press ENTER to start emulation!")
+
 
 breakpoint = 0xdbb5f
 stepping = False

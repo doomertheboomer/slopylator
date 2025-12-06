@@ -21,6 +21,7 @@ class dm6502:
             'c': 0
         }
         
+        # more layers of abstraction please sir
         self.rambus = rambus
                 
         # master list of all opcodes
