@@ -85,24 +85,25 @@ class dmppu:
         self.readRegisters()
         
         # address register operations
-        # upload current byte in header first before processing the rest
         # TODO: internal state IF it breaks
-
         # update address if the cpu writes to ppuaddr
         if self.rambus.cpuLastWrite == 0x2006:
             self.__updateAddr() # weird internal state update for addr register
         
         # if accessing palette data, upload immediately instead of on next cycle
-        # this will probably break lol
+        # this will probably break but if it doesnt im the best programmer on earth
         if (self.intlAddr >= 0x3F00) and (self.intlAddr <= 0x3FFF):
             self.data = self.rambus.memoryReadPPU(self.intlAddr)
         
         # only update data AFTER 2007 was read to. this happens after next cpu cycle
         if self.rambus.cpuLastRead == 0x2007:
+            self.data = self.rambus.memoryReadPPU(self.intlAddr)
+            self.intlAddr += (int(self.ctrlFlagGet('i')) * 31 + 1)
             self.rambus.cpuLastRead = 0xFFFFF
         elif self.rambus.cpuLastWrite == 0x2007:
             self.rambus.memoryWritePPU(self.intlAddr, self.data)
-            self.rambus.cpuLastWrite = 0xFFFFF
+            self.intlAddr += (int(self.ctrlFlagGet('i')) * 31 + 1)
+            self.rambus.cpuLastWrite = 0xFFFFF          
             
         # oam operations
         self.oamdata = self.oam[self.oamaddr] # immediate
@@ -110,9 +111,7 @@ class dmppu:
             self.oam[self.oamaddr] = self.oamdata
             self.rambus.cpuLastWrite = 0xFFFFF
         
-        # incrament after read
-        if self.rambus.cpuLastRead == 0x2007 or self.rambus.cpuLastWrite == 0x2007:
-            self.intlAddr += (int(self.ctrlFlagGet('i')) * 31 + 1)
+        
         
         self.writeRegisters()
         
