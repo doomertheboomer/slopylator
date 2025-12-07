@@ -19,6 +19,8 @@ class dmrambus:
         # internal PPU flip flops
         self.ppuintlAddrHigh = True
         
+        self.isVertical = False
+        
     # address mirroring logic for CPU
     def getMemAddyCPU(self, address):
         address &= 0xFFFF
@@ -81,6 +83,18 @@ class dmrambus:
             address = ((address - 0x3F00) % 0x20) + 0x3F00
             return address
         
+        # horizontal and vertical mirroring
+        # given A is 0-3ff and B is 400-7ff
+        # these need to be mirrored to 2000-3000
+        # hori is AABB and vert is ABAB
+        if (address >= 0x2000) and (address <= 0x2FFF):
+            if isVertical:
+                address &= 0x7FF
+            else:
+                offset = address & 0x3FF
+                quartile = (address - 0x2000) // 0x400
+                address = offset + ((quartile // 2) * 0x400)
+        
     def memoryReadPPU(self, address, end = None):
         fixAddy = self.getMemAddyPPU(address)
         if end != None:
@@ -134,7 +148,9 @@ cpu.pc = cpu.getIndirectAddress([0xfc, 0xff]) # needs to point to reset vector
 print(f"Program ROM loaded with entrypoint {hex(cpu.pc)}")
 
 # TODO: load chrrom into ppu
-
+bus.ppumem[0x0:0x2000] = chr
+bus.isVertical = isVertical
+print(f"CHR ROM and mirror data loaded into PPU")
 
 input("Press ENTER to start emulation!")
 
