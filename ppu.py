@@ -1,3 +1,4 @@
+import time
 class dmppu:
     def __init__(self, rambus, loglevel = 3):
         self.rambus = rambus
@@ -10,7 +11,9 @@ class dmppu:
         self.rambus.cpumem[0x2003] = 0 # oamaddr
         self.rambus.cpumem[0x2004] = 0 # oamdata
         self.rambus.cpumem[0x2005] = 0 # scroll (internal 2 byte)
+        
         self.cycles = 0
+        self.lastFrame = time.time()
         
         # read from PPU memory?
         # 2 byte internal register for addr
@@ -82,6 +85,11 @@ class dmppu:
             else:
                 self.ctrl &= ~mask
                     
+    # dummy frame render logic
+    def renderFrame(self):
+        # TODO
+        self.lastFrame = time.time()
+                    
     def fetch(self):
         self.readRegisters()
         
@@ -112,6 +120,17 @@ class dmppu:
             self.oamdma[self.oamaddr] = self.oamdata
             self.rambus.cpuLastWrite = 0xFFFFF
         
+        if (self.cycles % 89342) == 0:
+            delta = time.time() - self.lastFrame
+            # dont sleep if fps is less than 60 LOL
+            try:
+                time.sleep(0.0167 - delta)
+                pass
+            except:
+                pass
+            self.renderFrame()
+            print(f"frame rendered {1/delta} fps")
+
         self.writeRegisters()
         
-        self.cycles += 1        
+        self.cycles += 1

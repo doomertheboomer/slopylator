@@ -115,7 +115,7 @@ ppu = dmppu(bus, 5) # has its own ram too
 
 # python should let this var be used out of the if block
 if len(sys.argv) == 1:
-    filename = input("Enter the romfile name: ")
+    filename = input("Enter the romfile name (enter \"testrom\" for test rom): ")
 else:
     filename = sys.argv[1]
 
@@ -144,6 +144,8 @@ chr = romfile[chrStart:chrStart+8192] # best if i limit this for sanity
 # load prgrom into cpu
 bus.cpumem[0x8000:0x10000] = prg
 cpu.pc = cpu.getIndirectAddress([0xfc, 0xff]) # needs to point to reset vector
+if filename == "testrom":
+    cpu.pc = 0xC000
 print(f"Program ROM loaded with entrypoint {hex(cpu.pc)}")
 
 # TODO: load chrrom into ppu
@@ -152,7 +154,6 @@ bus.isVertical = isVertical
 print(f"CHR ROM and mirror data loaded into PPU")
 
 input("Press ENTER to start emulation!")
-
 
 breakpoint = 0xdbb5f
 stepping = False
@@ -166,9 +167,9 @@ while True:
         ppu.fetch()
     cpuCyclesOld = cpu.cycles
     
-    if stepping:
-        input()
-        print(f"A {hex(cpu.a)} X {hex(cpu.x)} Y {hex(cpu.y)} SR {hex(cpu.sr)} SP {hex(cpu.sp)}")
     if (cpu.pc == breakpoint):
         print(f"Breakpoint hit! A {hex(cpu.a)} X {hex(cpu.x)} Y {hex(cpu.y)} SR {hex(cpu.sr)} SP {hex(cpu.sp)}")
         stepping = True
+    if stepping:
+        input()
+        print(f"A {hex(cpu.a)} X {hex(cpu.x)} Y {hex(cpu.y)} SR {hex(cpu.sr)} SP {hex(cpu.sp)}")
