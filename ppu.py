@@ -86,24 +86,25 @@ class dmppu:
         # address bus operations
         
         # upload current byte in header first before processing the rest
-        if self.rambus.ppu2007Read: # only update data when 2007 is read from the CPU
+        # TODO: internal state IF it breaks
+        if self.rambus.cpuLastRead == 0x2007: # only update data when 2007 is read from the CPU
             self.data = self.rambus.memoryReadPPU(self.__intlAddr)
         
         # do not update if read
-        if not (self.rambus.ppu2007Read or self.rambus.ppu2007Write):
+        if not (self.rambus.cpuLastRead == 0x2007 or self.rambus.cpuLastWrite == 0x2007):
             self.__updateAddr() # weird internal state update for addr register
         
         # if accessing palette data, upload immediately instead of on next cycle
-        if self.rambus.ppu2007Read:
+        if self.rambus.cpuLastRead == 0x2007:
             if (self.__intlAddr >= 0x3F00) and (self.__intlAddr <= 0x3FFF):
                 self.data = self.rambus.memoryReadPPU(self.__intlAddr)
-            self.rambus.ppu2007Read = False
-        elif self.rambus.ppu2007Write:
+            self.rambus.cpuLastRead = 0xFFFFF
+        elif self.rambus.cpuLastWrite == 0x2007:
             self.rambus.memoryWritePPU(self.__intlAddr, self.data)
-            self.rambus.ppu2007Write = False
+            self.rambus.cpuLastWrite = 0xFFFFF
         
         # incrament after read
-        if self.rambus.ppu2007Read or self.rambus.ppu2007Write:
+        if self.rambus.cpuLastRead == 0x2007 or self.rambus.cpuLastWrite == 0x2007:
             self.__intlAddr += (int(self.ctrlFlagGet('i')) * 31 + 1)
         
         self.writeRegisters()

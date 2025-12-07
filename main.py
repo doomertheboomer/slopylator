@@ -12,10 +12,12 @@ class dmrambus:
         self.cpumem = [0] * 0x10000
         self.ppumem = [0] * 0x10000
         
+        # bus rw log, can be reset by PPU/CPU i guess
+        self.cpuLastRead = 0xFFFFF
+        self.cpuLastWrite = 0xFFFFF
+        
         # internal PPU flip flops
         self.ppuintlAddrHigh = True
-        self.ppu2007Read = False
-        self.ppu2007Write = False
         
     # address mirroring logic for CPU
     def getMemAddyCPU(self, address):
@@ -36,6 +38,7 @@ class dmrambus:
     
     def memoryReadCPU(self, address, end = None):
         fixAddy = self.getMemAddyCPU(address)
+        self.cpuLastRead = fixAddy
         
         # handle weird PPU edge cases (prepare for yandev quality code)
         if fixAddy == 0x2002:
@@ -43,8 +46,6 @@ class dmrambus:
         elif fixAddy == 0x2006:
             # for double address reads
             self.ppuintlAddrHigh = (not self.ppuintlAddrHigh)
-        elif fixAddy == 0x2007:
-            self.ppu2007Read = True
         
         if end != None:
             retVal = []
@@ -58,13 +59,12 @@ class dmrambus:
     def memoryWriteCPU(self, address, value):
         fixAddy = self.getMemAddyCPU(address)
         self.cpumem[fixAddy] = value
+        self.cpuLastWrite = fixAddy
         
         # handle weird PPU edge cases (prepare for yandev quality code)
         if fixAddy == 0x2006:
             # for double address writes
             self.ppuintlAddrHigh = (not self.ppuintlAddrHigh)
-        elif fixAddy == 0x2007:
-            self.ppu2007Write = True
         
     # address mirroring logic for PPU
     def getMemAddyPPU(self, address):
