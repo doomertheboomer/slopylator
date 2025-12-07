@@ -162,7 +162,7 @@ while True:
     cpu.fetch()
     
     # ppu is 3x faster than cpu
-    for i in range(cpu.cycles - cpuCyclesOld):
+    for i in range((cpu.cycles - cpuCyclesOld) * 3):
         ppu.fetch()
     cpuCyclesOld = cpu.cycles
     

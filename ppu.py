@@ -107,12 +107,11 @@ class dmppu:
             self.rambus.cpuLastWrite = 0xFFFFF          
             
         # oam operations
-        self.oamdata = self.oam[self.oamaddr] # immediate
+        self.oamdata = self.oamdma[self.oamaddr] # immediate
         if self.rambus.cpuLastWrite == 0x2004:
-            self.oam[self.oamaddr] = self.oamdata
+            self.oamdma[self.oamaddr] = self.oamdata
             self.rambus.cpuLastWrite = 0xFFFFF
         
         self.writeRegisters()
         
-        self.cycles += 1
-        
+        self.cycles += 1        
