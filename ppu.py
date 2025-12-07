@@ -1,7 +1,7 @@
 class dmppu:
     def __init__(self, rambus, loglevel = 3):
         self.rambus = rambus
-        self.oam = [0] * 0x256
+        self.oamdma = [0] * 0x256
         
         # init state
         self.rambus.cpumem[0x2000] = 0 # ctrl
@@ -10,6 +10,7 @@ class dmppu:
         self.rambus.cpumem[0x2003] = 0 # oamaddr
         self.rambus.cpumem[0x2004] = 0 # oamdata
         self.rambus.cpumem[0x2005] = 0 # scroll (internal 2 byte)
+        self.cycles = 0
         
         # read from PPU memory?
         # 2 byte internal register for addr
@@ -36,12 +37,12 @@ class dmppu:
         self.ctrl = self.rambus.cpumem[0x2000] # done
         self.mask = self.rambus.cpumem[0x2001]
         self.status = self.rambus.cpumem[0x2002]
-        self.oamaddr = self.rambus.cpumem[0x2003]
-        self.oamdata = self.rambus.cpumem[0x2004]
+        self.oamaddr = self.rambus.cpumem[0x2003] # done
+        self.oamdata = self.rambus.cpumem[0x2004] # done
         self.scroll = self.rambus.cpumem[0x2005]
         self.addr = self.rambus.cpumem[0x2006] # done
         self.data = self.rambus.cpumem[0x2007] # done
-        self.oamdma = self.rambus.cpumem[0x4014]
+        self.oamdma = self.rambus.cpumem[0x4014:0x4114] # done
         
     def writeRegisters(self):
         self.rambus.cpumem[0x2000] = self.ctrl
@@ -52,7 +53,7 @@ class dmppu:
         self.rambus.cpumem[0x2005] = self.scroll
         self.rambus.cpumem[0x2006] = self.addr
         self.rambus.cpumem[0x2007] = self.data
-        self.rambus.cpumem[0x4014] = self.oamdma
+        self.rambus.cpumem[0x4014:0x4114] = self.oamdma[0x0:0x100] # in case something goes wrong chop it
     
     def __updateAddr(self):
         highptr = int(self.rambus.ppuintlAddrHigh) * 8
@@ -111,8 +112,7 @@ class dmppu:
             self.oam[self.oamaddr] = self.oamdata
             self.rambus.cpuLastWrite = 0xFFFFF
         
-        
-        
         self.writeRegisters()
         
+        self.cycles += 1
         

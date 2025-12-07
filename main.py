@@ -18,7 +18,6 @@ class dmrambus:
         
         # internal PPU flip flops
         self.ppuintlAddrHigh = True
-        
         self.isVertical = False
         
     # address mirroring logic for CPU
@@ -158,8 +157,15 @@ input("Press ENTER to start emulation!")
 breakpoint = 0xdbb5f
 stepping = False
 # main loop
+cpuCyclesOld = 0
 while True:
     cpu.fetch()
+    
+    # ppu is 3x faster than cpu
+    for i in range(cpu.cycles - cpuCyclesOld):
+        ppu.fetch()
+    cpuCyclesOld = cpu.cycles
+    
     if stepping:
         input()
         print(f"A {hex(cpu.a)} X {hex(cpu.x)} Y {hex(cpu.y)} SR {hex(cpu.sr)} SP {hex(cpu.sp)}")

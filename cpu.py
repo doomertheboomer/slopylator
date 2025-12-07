@@ -20,6 +20,7 @@ class dm6502:
             'z': 1,
             'c': 0
         }
+        self.cycles = 0
         
         # more layers of abstraction please sir
         self.rambus = rambus
@@ -254,6 +255,7 @@ class dm6502:
         if (opcode in self.__opcodes) and (len(params) == self.__opcodes[opcode][1] - 1): # params len is subtracted by 1
             self.__opcodes[opcode][0](params)
             self.pc += self.__opcodes[opcode][1]
+            self.cycles += self.__opcodes[opcode][2]
             # TODO: cycle handling
         else:
             self.log(f"Illegal instruction! {hex(opcode)} params: {len(params)}", 2)
