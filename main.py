@@ -94,6 +94,8 @@ class dmrambus:
                 quartile = (address - 0x2000) // 0x400
                 address = offset + ((quartile // 2) * 0x400)
         
+        return address
+        
     def memoryReadPPU(self, address, end = None):
         fixAddy = self.getMemAddyPPU(address)
         if end != None:

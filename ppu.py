@@ -27,13 +27,28 @@ class dmppu:
         self.readRegisters()
         
         # constants
-        self.ctrlFlags = {
+        self.__ctrlFlags = {
             'i': 2, # ppudata address incrament
             's': 3, # sprite pattern table addr
             'b': 4, # bg pattern table addr
             'h': 5, # sprite size
             'p': 6, # ppu master/slave
             'v': 7 # vblank NMI (INTERRUPT!!!)
+        }
+        self.__maskFlags = {
+            'g': 0,
+            'm': 1,
+            'M': 2,
+            'b': 3,
+            's': 4,
+            'R': 5,
+            'G': 6,
+            'B': 7
+        }
+        self.__statusFlags = {
+            'o': 5,
+            's': 6,
+            'v': 7
         }
     
     def readRegisters(self):
@@ -65,7 +80,7 @@ class dmppu:
         self.intlAddr &= (0b1111111100000000 >> highptr) # shift right to reset high ptr, no shift to reset low ptr
         
         # write new bytes to high/low ptr
-        self.__ppuintlAddr |= (self.addr << highptr)
+        self.intlAddr |= (self.addr << highptr)
     
     def ctrlFlagGet(self, flag):
         # return an int for this
@@ -84,7 +99,31 @@ class dmppu:
                 self.ctrl |= mask
             else:
                 self.ctrl &= ~mask
-                    
+                
+    def maskFlagGet(self, flag):
+        if flag[0] in self.__maskFlags:
+            return bool((self.mask >> self.__maskFlags[flag[0]]) & 1)
+        
+    def maskFlagSet(self, flag, enable):
+        if flag[0] in self.__maskFlags:
+            mask = 1 << self.__maskFlags[flag[0]]
+            if enable:
+                self.mask |= mask
+            else:
+                self.mask &= ~mask
+    
+    def statusFlagGet(self, flag):
+        if flag[0] in self.__statusFlags:
+            return bool((self.status >> self.__statusFlags[flag[0]]) & 1)
+        
+    def statusFlagSet(self, flag, enable):
+        if flag[0] in self.__statusFlags:
+            mask = 1 << self.__statusFlags[flag[0]]
+            if enable:
+                self.status |= mask
+            else:
+                self.status &= ~mask             
+    
     # dummy frame render logic
     def renderFrame(self):
         # TODO
@@ -120,7 +159,17 @@ class dmppu:
             self.oamdma[self.oamaddr] = self.oamdata
             self.rambus.cpuLastWrite = 0xFFFFF
         
-        if (self.cycles % 89342) == 0:
+        # vblank flag is reset on read
+        self.rambus.cpuLastRead = 0x2002
+        self.statusFlagSet('v', False)
+        
+        # handling vblank with NMI
+        if (self.cycles % 89342) == 82181:
+            self.statusFlagSet('v', True)
+            # TODO: NMI
+            
+        # rendering new frames
+        elif (self.cycles % 89342) == 0:
             delta = time.time() - self.lastFrame
             # dont sleep if fps is less than 60 LOL
             try:
