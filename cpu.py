@@ -564,8 +564,7 @@ class dm6502:
         if self.srFlagGet('n') == False:
             self.__branch(params[0]) # function size will be added to pc after exec
     
-    # BRK: Force Break
-    def __brk(self, params):
+    def interrupt(self, handler):
         # push ret ptr to stack
         hibyte = (self.pc >> 8) & 0xFF
         lobyte = self.pc & 0xFF
@@ -581,7 +580,13 @@ class dm6502:
         self.srFlagSet('i', 1)
         
         # set pc to interrupt handler
-        self.pc = 0xFFFD # supposed to be FFFE but code will add 1 to pc after
+        lo = handler & 0xFF
+        hi = (handler >> 8) & 0xFF
+        self.pc = self.getIndirectAddress([lo, hi])
+    
+    # BRK: Force Break
+    def __brk(self, params):
+        self.interrupt(0xFFFE)
     
     # BVC: Branch on Overflow Clear
     def __bvc(self, params):

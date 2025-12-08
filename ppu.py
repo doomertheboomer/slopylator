@@ -163,11 +163,14 @@ class dmppu:
         self.rambus.cpuLastRead = 0x2002
         self.statusFlagSet('v', False)
         
+        # print(self.cycles % 89342)
         # handling vblank with NMI
         if (self.cycles % 89342) == 82181:
             self.statusFlagSet('v', True)
-            # TODO: NMI
-            
+            self.rambus.ppuInterrupt = True
+        elif (self.cycles % 89342) == 1:
+            self.statusFlagSet('v', False)
+        
         # rendering new frames
         elif (self.cycles % 89342) == 0:
             delta = time.time() - self.lastFrame

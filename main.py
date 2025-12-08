@@ -19,6 +19,7 @@ class dmrambus:
         # internal PPU flip flops
         self.ppuintlAddrHigh = True
         self.isVertical = False
+        self.ppuInterrupt = False
         
     # address mirroring logic for CPU
     def getMemAddyCPU(self, address):
@@ -112,7 +113,7 @@ class dmrambus:
         self.ppumem[fixAddy] = value
         
 bus = dmrambus()
-cpu = dm6502(bus, 5) # has ram mirrored by bus
+cpu = dm6502(bus, 0) # has ram mirrored by bus
 ppu = dmppu(bus, 5) # has its own ram too
 
 # python should let this var be used out of the if block
@@ -157,11 +158,14 @@ print(f"CHR ROM and mirror data loaded into PPU")
 
 input("Press ENTER to start emulation!")
 
-breakpoint = 0xdbb5f
+breakpoint = 0xc860f
 stepping = False
 # main loop
 cpuCyclesOld = 0
 while True:
+    if (bus.ppuInterrupt):
+        cpu.interrupt(0xFFFA)
+        bus.ppuInterrupt = False
     cpu.fetch()
     
     # ppu is 3x faster than cpu
