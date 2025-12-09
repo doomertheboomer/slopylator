@@ -3,10 +3,10 @@ from window import *
 
 class dmppu:
     def __init__(self, rambus, loglevel = 3):
-        self.window = dmslopywindow()
+        # self.window = dmslopywindow()
         
         self.rambus = rambus
-        self.oamdma = [0] * 0x256
+        self.oam = [0] * 0x256
         
         # init state
         self.rambus.cpumem[0x2000] = 0 # ctrl
@@ -64,7 +64,7 @@ class dmppu:
         self.scroll = self.rambus.cpumem[0x2005]
         self.addr = self.rambus.cpumem[0x2006] # done
         self.data = self.rambus.cpumem[0x2007] # done
-        self.oamdma = self.rambus.cpumem[0x4014:0x4114] # done
+        self.oamdma = self.rambus.cpumem[0x4014] # done
         
     def writeRegisters(self):
         self.rambus.cpumem[0x2000] = self.ctrl
@@ -75,7 +75,7 @@ class dmppu:
         self.rambus.cpumem[0x2005] = self.scroll
         self.rambus.cpumem[0x2006] = self.addr
         self.rambus.cpumem[0x2007] = self.data
-        self.rambus.cpumem[0x4014:0x4114] = self.oamdma[0x0:0x100] # in case something goes wrong chop it
+        self.rambus.cpumem[0x4014] = self.oamdma # in case something goes wrong chop it
     
     def __updateAddr(self):
         highptr = int(self.rambus.ppuintlAddrHigh) * 8
@@ -130,9 +130,16 @@ class dmppu:
     
     # dummy frame render logic
     def renderFrame(self):
-        for event in pygame.event.get():
-            pass
-                
+        # for event in pygame.event.get():
+        #     # print(event)
+        #     pass
+        
+        # self.window.screen.fill("purple")
+
+        # RENDER YOUR GAME HERE
+
+        # flip() the display to put your work on screen
+        # pygame.display.flip()
         self.lastFrame = time.time() # this line HAS to be last
                     
     def fetch(self):
@@ -160,10 +167,13 @@ class dmppu:
             self.rambus.cpuLastWrite = 0xFFFFF          
             
         # oam operations
-        self.oamdata = self.oamdma[self.oamaddr] # immediate
+        self.oamdata = self.oam[self.oamaddr] # immediate
         if self.rambus.cpuLastWrite == 0x2004:
-            self.oamdma[self.oamaddr] = self.oamdata
+            self.oam[self.oamaddr] = self.oamdata
             self.rambus.cpuLastWrite = 0xFFFFF
+        elif self.rambus.cpuLastWrite == 0x4014:
+            page = self.oamdma * 0x100
+            self.oam[0x00:0xFF] = self.rambus.memoryReadCPU(page, page + 0xFF)
         
         # vblank flag is reset on read
         self.rambus.cpuLastRead = 0x2002
@@ -188,6 +198,7 @@ class dmppu:
                 pass
             self.renderFrame()
             print(f"frame rendered {1/delta} fps")
+            print(self.rambus.cpumem[0x200:0x300])
 
         self.writeRegisters()
         

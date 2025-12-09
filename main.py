@@ -5,10 +5,6 @@ import sys
 from cpu import *
 from ppu import *
 from bus import *
-        
-bus = dmrambus()
-cpu = dm6502(bus, 0) # has ram mirrored by bus
-ppu = dmppu(bus, 5) # has its own ram too
 
 # python should let this var be used out of the if block
 if len(sys.argv) == 1:
@@ -38,6 +34,10 @@ if prgRom == 1:
 
 chr = romfile[chrStart:chrStart+8192] # best if i limit this for sanity
 
+bus = dmrambus(isVertical)
+cpu = dm6502(bus, 0) # has ram mirrored by bus
+ppu = dmppu(bus, 5) # has its own ram too
+
 # load prgrom into cpu
 bus.cpumem[0x8000:0x10000] = prg
 cpu.pc = cpu.getIndirectAddress([0xfc, 0xff]) # needs to point to reset vector
@@ -52,12 +52,22 @@ print(f"CHR ROM and mirror data loaded into PPU")
 
 input("Press ENTER to start emulation!")
 
-breakpoint = 0xc860f
+breakpoint = 0xc860
 stepping = False
 # main loop
 cpuCyclesOld = 0
 while True:
-    if (bus.ppuInterrupt):
+    if (cpu.pc == breakpoint):
+        print(f"Breakpoint hit! A {hex(cpu.a)} X {hex(cpu.x)} Y {hex(cpu.y)} SR {hex(cpu.sr)} SP {hex(cpu.sp)}")
+        stepping = True
+    if stepping:
+        t = input()
+        print(f"A {hex(cpu.a)} X {hex(cpu.x)} Y {hex(cpu.y)} SR {hex(cpu.sr)} SP {hex(cpu.sp)}")
+        if len(t) > 0:
+            stepping = False
+    
+    if (bus.ppuInterrupt & ppu.ctrlFlagGet('v')):
+        # stepping = True
         cpu.interrupt(0xFFFA)
         bus.ppuInterrupt = False
     cpu.fetch()
@@ -66,10 +76,3 @@ while True:
     for i in range((cpu.cycles - cpuCyclesOld) * 3):
         ppu.fetch()
     cpuCyclesOld = cpu.cycles
-    
-    if (cpu.pc == breakpoint):
-        print(f"Breakpoint hit! A {hex(cpu.a)} X {hex(cpu.x)} Y {hex(cpu.y)} SR {hex(cpu.sr)} SP {hex(cpu.sp)}")
-        stepping = True
-    if stepping:
-        input()
-        print(f"A {hex(cpu.a)} X {hex(cpu.x)} Y {hex(cpu.y)} SR {hex(cpu.sr)} SP {hex(cpu.sp)}")

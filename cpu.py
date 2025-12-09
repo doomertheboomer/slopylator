@@ -998,7 +998,7 @@ class dm6502:
         
     # accumulator
     def __lsr4A(self, params):
-        self.log(f"lsr {params}", 5)
+        self.log(f"lsr accumulator", 5)
         old = self.a
         self.a = self.a >> 1
         # set status flags
@@ -1215,7 +1215,7 @@ class dm6502:
         lobyte = self.stackPull()
         hibyte = self.stackPull()
         self.pc = (((lobyte & 0xFF) | (hibyte << 8))) & 0xFFFF # limit to 16 bit address space
-        self.log(f"rts {self.pc}", 5)
+        self.log(f"rts {hex(self.pc)}", 5)
 
     
     # SBC: Subtract Memory from Accumulator with Borrow

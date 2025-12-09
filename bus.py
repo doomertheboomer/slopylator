@@ -1,5 +1,5 @@
 class dmrambus:
-    def __init__(self):
+    def __init__(self, isVertical):
         # up to 0x10000 for both cpu and ppu
         self.cpumem = [0] * 0x10000
         self.ppumem = [0] * 0x10000
@@ -12,6 +12,8 @@ class dmrambus:
         self.ppuintlAddrHigh = True
         self.isVertical = False
         self.ppuInterrupt = False
+        
+        self.isVertical = isVertical
         
     # address mirroring logic for CPU
     def getMemAddyCPU(self, address):
@@ -80,7 +82,7 @@ class dmrambus:
         # these need to be mirrored to 2000-3000
         # hori is AABB and vert is ABAB
         if (address >= 0x2000) and (address <= 0x2FFF):
-            if isVertical:
+            if self.isVertical:
                 address &= 0x7FF
             else:
                 offset = address & 0x3FF
