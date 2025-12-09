@@ -1112,7 +1112,7 @@ class dm6502:
         old = self.rambus.memoryReadCPU(address)
         # self.memory[address] = self.memory[address] << 1 # Move each of the bits in either A or M one place to the left
         # self.memory[address] |= int(self.srFlagGet('c')) # Bit 0 is filled with the current value of the carry flag
-        self.rambus.memoryWriteCPU(address, self.rambus.memoryReadCPU(address) << 1) # Move each of the bits in either A or M one place to the left
+        self.rambus.memoryWriteCPU(address, (self.rambus.memoryReadCPU(address) << 1) & 0xFF) # Move each of the bits in either A or M one place to the left
         self.rambus.memoryWriteCPU(address, self.rambus.memoryReadCPU(address) | int(self.srFlagGet('c'))) # Bit 0 is filled with the current value of the carry flag
         # set all da flags
         self.srFlagSet('c', bool((old >> 7) & 1)) # the old bit 7 becomes the new carry flag value
@@ -1124,7 +1124,7 @@ class dm6502:
         # Move each of the bits in either A or M one place to the left. Bit 0 is filled with the current value of the carry flag whilst the old bit 7 becomes the new carry flag value.
         self.log(f"rol A", 5)
         old = self.a
-        self.a = self.a << 1 # Move each of the bits in either A or M one place to the left
+        self.a = (self.a << 1) & 0xFF # Move each of the bits in either A or M one place to the left
         self.a |= int(self.srFlagGet('c')) # Bit 0 is filled with the current value of the carry flag
         # set all da flags
         self.srFlagSet('c', bool((old >> 7) & 1)) # the old bit 7 becomes the new carry flag value
