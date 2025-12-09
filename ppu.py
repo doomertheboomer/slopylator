@@ -1,6 +1,10 @@
 import time
+from window import *
+
 class dmppu:
     def __init__(self, rambus, loglevel = 3):
+        self.window = dmslopywindow()
+        
         self.rambus = rambus
         self.oamdma = [0] * 0x256
         
@@ -126,8 +130,10 @@ class dmppu:
     
     # dummy frame render logic
     def renderFrame(self):
-        # TODO
-        self.lastFrame = time.time()
+        for event in pygame.event.get():
+            pass
+                
+        self.lastFrame = time.time() # this line HAS to be last
                     
     def fetch(self):
         self.readRegisters()
