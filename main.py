@@ -5,6 +5,7 @@ import sys
 from cpu import *
 from ppu import *
 from bus import *
+from pad import *
 
 # python should let this var be used out of the if block
 if len(sys.argv) == 1:
@@ -37,6 +38,7 @@ chr = romfile[chrStart:chrStart+8192] # best if i limit this for sanity
 bus = dmrambus(isVertical)
 cpu = dm6502(bus, 0) # has ram mirrored by bus
 ppu = dmppu(bus, 5) # has its own ram too
+pad = dmjoypad(bus)
 
 # load prgrom into cpu
 bus.cpumem[0x8000:0x10000] = prg
