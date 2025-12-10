@@ -3,7 +3,8 @@ class dmrambus:
         # up to 0x10000 for both cpu and ppu
         self.cpumem = [0] * 0x10000
         self.ppumem = [0] * 0x10000
-        
+        self.ppuNameTableMemory = [0] * 0xffff
+
         # bus rw log, can be reset by PPU/CPU i guess
         self.cpuLastRead = 0xFFFFF
         self.cpuLastWrite = 0xFFFFF
@@ -80,18 +81,12 @@ class dmrambus:
         
     # address mirroring logic for PPU
     def getMemAddyPPU(self, address):
-        # mirrors are nested so better substitute high addresses for this
-        address = (address % 0x4000)
-        
-        # first mirror
-        if (address >= 0x3000) and (address <= 0x3EFF):
-            address = (address & 0x3000) + 0x2000 # only one mirror so no need to do weird things
-            return address
-        
-        # second mirror
-        if (address >= 0x3F20) and (address <= 0x3FFF):
-            address = ((address - 0x3F00) % 0x20) + 0x3F00
-            return address
+        if address >= 0 and address <= 0x1FFF:
+            return self.ppumem, address
+                
+        # $3000-3EFF is usually a mirror of the 2kB region from $2000-2EFF. The PPU does not render from this address range, so this space has negligible utility.
+        #if (address >= 0x3000) and (address <= 0x3EFF):
+        #    address -= 0x1000
         
         # horizontal and vertical mirroring
         # given A is 0-3ff and B is 400-7ff
@@ -99,25 +94,25 @@ class dmrambus:
         # hori is AABB and vert is ABAB
         if (address >= 0x2000) and (address <= 0x2FFF):
             if self.isVertical:
-                address &= 0x7FF
+                return self.ppuNameTableMemory, address & 0x7FF
             else:
                 offset = address & 0x3FF
                 quartile = (address - 0x2000) // 0x400
-                address = offset + ((quartile // 2) * 0x400)
-        
-        return address
+                newAddress = offset + ((quartile // 2) * 0x400)
+                return self.ppuNameTableMemory, newAddress # use struct for dynamic ppu/mainmem switch
+        return self.ppumem, address
         
     def memoryReadPPU(self, address, end = None):
-        fixAddy = self.getMemAddyPPU(address)
+        data, addr = self.getMemAddyPPU(address)
         if end != None:
             retVal = []
             for i in range(address, end):
-                fixAddy = self.getMemAddyPPU(i)
-                retVal.append(self.ppumem[fixAddy])
+                data, addr = self.getMemAddyPPU(i)
+                retVal.append(data[addr])
         else:
-            return self.ppumem[fixAddy]
+            return data[addr]
         return retVal
     
     def memoryWritePPU(self, address, value):
-        fixAddy = self.getMemAddyPPU(address)
-        self.ppumem[fixAddy] = value
+        data, addr = self.getMemAddyPPU(address)
+        data[addr] = value

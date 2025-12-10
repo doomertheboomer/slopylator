@@ -3,7 +3,7 @@ from window import *
 
 class dmppu:
     def __init__(self, rambus, loglevel = 3):
-        # self.window = dmslopywindow()
+        self.window = dmslopywindow()
         
         self.rambus = rambus
         self.rambus.readHooks.append(self.ram_read)
@@ -76,9 +76,10 @@ class dmppu:
             return bool((self.ctrl >> self.__ctrlFlags[flag[0]]) & 1)
         
     def ctrlFlagSet(self, flag, enable):
-        # TODO: writing to N flag lol
         if flag == 'n':
-            pass
+            self.ctrlFlagSet('n0', bool(enable & 1))
+            self.ctrlFlagSet('n1', bool(enable & 2))
+            return
         if flag[0] in self.__ctrlFlags:
             mask = 1 << self.__ctrlFlags[flag[0]]
             if enable:
@@ -191,16 +192,16 @@ class dmppu:
     
     # dummy frame render logic
     def renderFrame(self):
-        # for event in pygame.event.get():
-        #     # print(event)
-        #     pass
+        for event in pygame.event.get():
+            # print(event)
+            pass
         
-        # self.window.screen.fill("purple")
+        self.window.screen.fill("purple")
 
         # RENDER YOUR GAME HERE
 
         # flip() the display to put your work on screen
-        # pygame.display.flip()
+        pygame.display.flip()
         self.lastFrame = time.time() # this line HAS to be last
                     
     def fetch(self):
