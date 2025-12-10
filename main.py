@@ -52,7 +52,7 @@ print(f"CHR ROM and mirror data loaded into PPU")
 
 input("Press ENTER to start emulation!")
 
-breakpoints = [0xc7af, 0xc860]
+breakpoints = []
 stepping = False
 # main loop
 cpuCyclesOld = 0
@@ -66,10 +66,13 @@ while True:
         if len(t) > 0:
             stepping = False
     
-    if (bus.ppuInterrupt & ppu.ctrlFlagGet('v')):
-        # stepping = True
-        # print("NMI enable")
-        cpu.interrupt(0xFFFA)
+    if bus.ppuInterrupt:
+        # print(hex(cpu.pc)) # TEMP
+        # this needs to be nested
+        if ppu.ctrlFlagGet('v'):
+            # stepping = True
+            # print("NMI enable")
+            cpu.interrupt(0xFFFA)
         bus.ppuInterrupt = False
     cpu.fetch()
     
@@ -77,3 +80,4 @@ while True:
     for i in range((cpu.cycles - cpuCyclesOld) * 3):
         ppu.fetch()
     cpuCyclesOld = cpu.cycles
+    

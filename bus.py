@@ -15,6 +15,10 @@ class dmrambus:
         
         self.isVertical = isVertical
         
+        # for PPU RW logic
+        self.readHooks = []
+        self.writeHooks = []
+        
     # address mirroring logic for CPU
     def getMemAddyCPU(self, address):
         address &= 0xFFFF
@@ -35,6 +39,12 @@ class dmrambus:
     def memoryReadCPU(self, address, end = None):
         fixAddy = self.getMemAddyCPU(address)
         self.cpuLastRead = fixAddy
+
+        # skibidi callback
+        for f in self.readHooks:
+            v = f(fixAddy)
+            if v is not None:
+                return v
         
         # handle weird PPU edge cases (prepare for yandev quality code)
         if fixAddy == 0x2002:
@@ -54,13 +64,19 @@ class dmrambus:
     
     def memoryWriteCPU(self, address, value):
         fixAddy = self.getMemAddyCPU(address)
-        self.cpumem[fixAddy] = value
         self.cpuLastWrite = fixAddy
+        
+        for f in self.writeHooks:
+            if f(fixAddy, value) is not None:
+                return
+
+        self.cpumem[fixAddy] = value
         
         # handle weird PPU edge cases (prepare for yandev quality code)
         if fixAddy == 0x2006:
             # for double address writes
             self.ppuintlAddrHigh = (not self.ppuintlAddrHigh)
+
         
     # address mirroring logic for PPU
     def getMemAddyPPU(self, address):

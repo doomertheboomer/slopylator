@@ -6,6 +6,9 @@ class dmppu:
         # self.window = dmslopywindow()
         
         self.rambus = rambus
+        self.rambus.readHooks.append(self.ram_read)
+        self.rambus.writeHooks.append(self.ram_write)
+
         self.oam = [0] * 0x256
         
         # init state
@@ -28,7 +31,17 @@ class dmppu:
         
         # skibidi dma
         self.rambus.cpumem[0x4014] = 0 # oamdma
-        self.readRegisters()
+        
+        # readregisters
+        self.ctrl = self.rambus.cpumem[0x2000] # done
+        self.mask = self.rambus.cpumem[0x2001]
+        self.status = self.rambus.cpumem[0x2002]
+        self.oamaddr = self.rambus.cpumem[0x2003] # done
+        self.oamdata = self.rambus.cpumem[0x2004] # done
+        self.scroll = self.rambus.cpumem[0x2005]
+        self.addr = self.rambus.cpumem[0x2006] # done
+        self.data = self.rambus.cpumem[0x2007] # done
+        self.oamdma = self.rambus.cpumem[0x4014] # done
         
         # constants
         self.__ctrlFlags = {
@@ -53,38 +66,7 @@ class dmppu:
             'o': 5,
             's': 6,
             'v': 7
-        }
-    
-    def readRegisters(self):
-        self.ctrl = self.rambus.cpumem[0x2000] # done
-        self.mask = self.rambus.cpumem[0x2001]
-        self.status = self.rambus.cpumem[0x2002]
-        self.oamaddr = self.rambus.cpumem[0x2003] # done
-        self.oamdata = self.rambus.cpumem[0x2004] # done
-        self.scroll = self.rambus.cpumem[0x2005]
-        self.addr = self.rambus.cpumem[0x2006] # done
-        self.data = self.rambus.cpumem[0x2007] # done
-        self.oamdma = self.rambus.cpumem[0x4014] # done
-        
-    def writeRegisters(self):
-        self.rambus.cpumem[0x2000] = self.ctrl
-        self.rambus.cpumem[0x2001] = self.mask
-        self.rambus.cpumem[0x2002] = self.status
-        self.rambus.cpumem[0x2003] = self.oamaddr
-        self.rambus.cpumem[0x2004] = self.oamdata
-        self.rambus.cpumem[0x2005] = self.scroll
-        self.rambus.cpumem[0x2006] = self.addr
-        self.rambus.cpumem[0x2007] = self.data
-        self.rambus.cpumem[0x4014] = self.oamdma # in case something goes wrong chop it
-    
-    def __updateAddr(self):
-        highptr = int(self.rambus.ppuintlAddrHigh) * 8
-        
-        # reset bytes to write first
-        self.intlAddr &= (0b1111111100000000 >> highptr) # shift right to reset high ptr, no shift to reset low ptr
-        
-        # write new bytes to high/low ptr
-        self.intlAddr |= (self.addr << highptr)
+        }    
     
     def ctrlFlagGet(self, flag):
         # return an int for this
@@ -128,6 +110,85 @@ class dmppu:
             else:
                 self.status &= ~mask             
     
+    def ram_read(self, address):
+        if address == 0x2000:
+            return self.ctrl
+        if address == 0x2001:
+            return self.mask
+        if address == 0x2002:
+            status = self.status
+
+            # reset vblank on read
+            self.statusFlagSet('v', False)
+
+            #read resets write pair for $2005/$2006
+            self.secondWrite = False
+
+            return status
+        if address == 0x2003:
+            return self.oamaddr
+        if address == 0x2004:
+            return self.oam[self.oamaddr]
+        if address == 0x2005:
+            return self.scroll
+        if address == 0x2006:
+            return self.addr
+        if address == 0x2007:
+            print(f"vram read {hex(self.intlAddr)}")
+
+            # directly read from vram for palette data
+            if (self.intlAddr >= 0x3F00) and (self.intlAddr <= 0x3FFF):
+                return_value = self.rambus.memoryReadPPU(self.intlAddr)
+                # buffer the data "underneath"
+                self.data = self.rambus.memoryReadPPU(self.intlAddr - 0x1000)
+            else:
+                return_value = self.data
+                self.data = self.rambus.memoryReadPPU(self.intlAddr)
+            self.intlAddr += (int(self.ctrlFlagGet('i')) * 31 + 1)
+            return return_value
+
+    def ram_write(self, address, value):
+        if address == 0x2000:
+            self.ctrl = value
+            return True
+        if address == 0x2001:
+            self.mask = value
+            return True
+        if address == 0x2002:
+            self.status = value
+            return True
+        if address == 0x2003:
+            self.oamaddr = value
+            return True
+        if address == 0x2004:
+            self.oam[self.oamaddr] = value
+            self.oamaddr = (self.oamaddr + 1) & 0xFF
+            return True
+        if address == 0x2005:
+            self.scroll = value
+
+            self.secondWrite = not self.secondWrite
+            return True
+        if address == 0x2006:
+            self.addr = value
+
+            if self.secondWrite:
+                self.intlAddr = (self.intlAddr & 0xFF00) + value
+            else:
+                self.intlAddr = (self.intlAddr & 0x00FF) + (value << 8)
+                
+            self.secondWrite = not self.secondWrite
+            return True
+        if address == 0x2007:
+            self.rambus.memoryWritePPU(self.intlAddr, value)
+            self.intlAddr += (int(self.ctrlFlagGet('i')) * 31 + 1)
+            return True
+        if address == 0x4014:
+            # TODO: 513-514 cycle delay
+            page = self.oamdma * 0x100
+            self.oam[0x00:0xFF] = self.rambus.memoryReadCPU(page, page + 0xFF)
+            return True
+    
     # dummy frame render logic
     def renderFrame(self):
         # for event in pygame.event.get():
@@ -143,53 +204,16 @@ class dmppu:
         self.lastFrame = time.time() # this line HAS to be last
                     
     def fetch(self):
-        self.readRegisters()
-        
-        # address register operations
-        # TODO: internal state IF it breaks
-        # update address if the cpu writes to ppuaddr
-        if self.rambus.cpuLastWrite == 0x2006:
-            self.__updateAddr() # weird internal state update for addr register
-        
-        # if accessing palette data, upload immediately instead of on next cycle
-        # this will probably break but if it doesnt im the best programmer on earth
-        if (self.intlAddr >= 0x3F00) and (self.intlAddr <= 0x3FFF):
-            self.data = self.rambus.memoryReadPPU(self.intlAddr)
-        
-        # only update data AFTER 2007 was read to. this happens after next cpu cycle
-        if self.rambus.cpuLastRead == 0x2007:
-            self.data = self.rambus.memoryReadPPU(self.intlAddr)
-            self.intlAddr += (int(self.ctrlFlagGet('i')) * 31 + 1)
-            self.rambus.cpuLastRead = 0xFFFFF
-        elif self.rambus.cpuLastWrite == 0x2007:
-            self.rambus.memoryWritePPU(self.intlAddr, self.data)
-            self.intlAddr += (int(self.ctrlFlagGet('i')) * 31 + 1)
-            self.rambus.cpuLastWrite = 0xFFFFF          
-            
-        # oam operations
-        self.oamdata = self.oam[self.oamaddr] # immediate
-        if self.rambus.cpuLastWrite == 0x2004:
-            self.oam[self.oamaddr] = self.oamdata
-            self.rambus.cpuLastWrite = 0xFFFFF
-        elif self.rambus.cpuLastWrite == 0x4014:
-            page = self.oamdma * 0x100
-            self.oam[0x00:0xFF] = self.rambus.memoryReadCPU(page, page + 0xFF)
-        
-        # vblank flag is reset on read
-        if self.rambus.cpuLastRead == 0x2002:
-            self.statusFlagSet('v', False)
-            self.rambus.cpuLastRead = 0xFFFFF
-        
         # frame timing stuff
         cycle = self.cycles % 89342
         
         # handling vblank with NMI
         if (cycle) == 82181:
             self.statusFlagSet('v', True)
-            self.ctrlFlagSet('v', True)
+            # self.ctrlFlagSet('v', True)
             self.rambus.ppuInterrupt = True
         elif (cycle) == 0:
-            self.statusFlagSet('v', False)
+            # self.statusFlagSet('v', False)
             
             # rendering new frames
             delta = time.time() - self.lastFrame
@@ -202,7 +226,5 @@ class dmppu:
             self.renderFrame()
             print(f"frame rendered {1/delta} fps")
             print(self.rambus.cpumem[0x200:0x300])
-
-        self.writeRegisters()
         
         self.cycles += 1
