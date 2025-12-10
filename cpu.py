@@ -353,8 +353,8 @@ class dm6502:
     # ADC: Add Memory to Accumulator with Carry
     def __adc(self, amount):
         self.log(f"adc {amount}", 5)
-        orig_a = self.a + int(self.srFlagGet('c'))
-        self.a += amount
+        orig_a = self.a 
+        self.a += amount + int(self.srFlagGet('c'))
     
         # set c flag and correct value
         self.srFlagSet('c', self.a > 255)
