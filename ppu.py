@@ -173,6 +173,7 @@ class dmppu:
             self.oamaddr = value
             return True
         if address == 0x2004:
+            # print("oam write")
             self.oam[self.oamaddr] = value
             self.oamaddr = (self.oamaddr + 1) & 0xFF
             return True
@@ -197,8 +198,9 @@ class dmppu:
             return True
         if address == 0x4014:
             # TODO: 513-514 cycle delay
-            page = self.oamaddr * 0x100
+            page = value * 0x100
             self.oam[0x00:0xFF] = self.rambus.memoryReadCPU(page, page + 0xFF)
+            # print(f"oam dma {hex(page)}")
             return True
     
     # frame render logic
@@ -211,7 +213,6 @@ class dmppu:
 
         # RENDER YOUR GAME HERE
         self.renderBackground()
-
         # flip() the display to put your work on screen
         pygame.display.flip()
         self.lastFrame = time.time() # this line HAS to be last
