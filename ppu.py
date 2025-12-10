@@ -176,19 +176,22 @@ class dmppu:
             self.oam[0x00:0xFF] = self.rambus.memoryReadCPU(page, page + 0xFF)
         
         # vblank flag is reset on read
-        self.rambus.cpuLastRead = 0x2002
-        self.statusFlagSet('v', False)
-        
-        # print(self.cycles % 89342)
-        # handling vblank with NMI
-        if (self.cycles % 89342) == 82181:
-            self.statusFlagSet('v', True)
-            self.rambus.ppuInterrupt = True
-        elif (self.cycles % 89342) == 1:
+        if self.rambus.cpuLastRead == 0x2002:
             self.statusFlagSet('v', False)
+            self.rambus.cpuLastRead = 0xFFFFF
         
-        # rendering new frames
-        elif (self.cycles % 89342) == 0:
+        # frame timing stuff
+        cycle = self.cycles % 89342
+        
+        # handling vblank with NMI
+        if (cycle) == 82181:
+            self.statusFlagSet('v', True)
+            self.ctrlFlagSet('v', True)
+            self.rambus.ppuInterrupt = True
+        elif (cycle) == 0:
+            self.statusFlagSet('v', False)
+            
+            # rendering new frames
             delta = time.time() - self.lastFrame
             # dont sleep if fps is less than 60 LOL
             try:
