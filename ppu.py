@@ -1,6 +1,13 @@
 import time
 from window import *
 
+bgColors = [
+    (0, 0, 0),
+    (255, 0, 0),
+    (0, 255, 0),
+    (0, 0, 255)
+]
+
 class dmppu:
     def __init__(self, rambus, loglevel = 3):
         self.window = dmslopywindow()
@@ -8,8 +15,10 @@ class dmppu:
         self.rambus = rambus
         self.rambus.readHooks.append(self.ram_read)
         self.rambus.writeHooks.append(self.ram_write)
+        self.secondWrite = False
 
         self.oam = [0] * 0x256
+        self.patternTable = []
         
         # init state
         self.rambus.cpumem[0x2000] = 0 # ctrl
@@ -45,6 +54,8 @@ class dmppu:
         
         # constants
         self.__ctrlFlags = {
+            'n0': 0,
+            'n1': 1,
             'i': 2, # ppudata address incrament
             's': 3, # sprite pattern table addr
             'b': 4, # bg pattern table addr
@@ -186,24 +197,81 @@ class dmppu:
             return True
         if address == 0x4014:
             # TODO: 513-514 cycle delay
-            page = self.oamdma * 0x100
+            page = self.oamaddr * 0x100
             self.oam[0x00:0xFF] = self.rambus.memoryReadCPU(page, page + 0xFF)
             return True
     
-    # dummy frame render logic
+    # frame render logic
     def renderFrame(self):
         for event in pygame.event.get():
             # print(event)
             pass
         
-        self.window.screen.fill("purple")
+        self.window.screen.fill(0x400000) # blood red for the blood sweat and tears going into ts
 
         # RENDER YOUR GAME HERE
+        self.renderBackground()
 
         # flip() the display to put your work on screen
         pygame.display.flip()
         self.lastFrame = time.time() # this line HAS to be last
-                    
+        
+    def buildPatternTable(self):
+        address = 0
+        patternTable = []
+
+        for i in range(2): # iterate through both pattern tables
+            tiles = []
+            for j in range(256): # iterate through all tiles in table
+                tile = []
+                for k in range(8): # 8*2 byte pairs per tile
+                    lobyte = self.rambus.memoryReadPPU(address)
+                    hibyte = self.rambus.memoryReadPPU(address + 8)
+                    address += 1
+
+                    row = []
+                    for x in range(8): # for each pixel in the row
+                        # decrement, take msb first
+                        bit0 = (lobyte >> (7 - x)) & 1
+                        bit1 = (hibyte >> (7 - x)) & 1
+                        color_index = (bit1 << 1) | bit0
+                        #print(color_index)
+                        row.append(color_index)
+                    tile.append(row)
+                address += 8 # already parsed the other 8 hibytes, skip
+                tiles.append(tile)
+            
+            patternTable.append(tiles)
+        self.patternTable = patternTable
+
+    def renderBackground(self):
+        nametable_start = 0x2000 # TODO: change this dynamically with ppu flags
+
+        # Draw 32x30 tiles
+        for y in range(30):
+            for x in range(32):
+
+                # tile index from nametable
+                address = nametable_start + y * 32 + x # base + y offset + x offset (like a 2d array access)
+                tile_index = self.rambus.memoryReadPPU(address)
+
+                # select pattern table
+                name = self.patternTable[int(self.ctrlFlagGet('b'))][tile_index]
+                
+                # iterate per pixel for drawing
+                # 8*8 pixel tiles
+                screen_y = y * 8
+                for row in name:
+                    screen_x = x * 8
+
+                    for pixel in row:
+                        color = bgColors[pixel] # faster to hardcode 4 colors than indexing attribute table
+
+                        self.window.screen.set_at((screen_x, screen_y), color)
+                        screen_x += 1
+
+                    screen_y += 1
+                                        
     def fetch(self):
         # frame timing stuff
         cycle = self.cycles % 89342
@@ -221,11 +289,10 @@ class dmppu:
             # dont sleep if fps is less than 60 LOL
             try:
                 time.sleep(0.0167 - delta)
-                pass
             except:
                 pass
             self.renderFrame()
             print(f"frame rendered {1/delta} fps")
-            print(self.rambus.cpumem[0x200:0x300])
+            # print(self.oam)
         
         self.cycles += 1

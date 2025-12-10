@@ -50,6 +50,7 @@ print(f"Program ROM loaded with entrypoint {hex(cpu.pc)}")
 # TODO: load chrrom into ppu
 bus.ppumem[0x0:0x2000] = chr
 bus.isVertical = isVertical
+ppu.buildPatternTable()
 print(f"CHR ROM and mirror data loaded into PPU")
 
 input("Press ENTER to start emulation!")

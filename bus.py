@@ -2,9 +2,10 @@ class dmrambus:
     def __init__(self, isVertical):
         # up to 0x10000 for both cpu and ppu
         self.cpumem = [0] * 0x10000
-        self.ppumem = [0] * 0x10000
-        self.ppuNameTableMemory = [0] * 0xffff
+        self.ppumem = [0] * 0x3FFF
 
+        self.ppuNameTableMemory = [0] * 0xffff
+        
         # bus rw log, can be reset by PPU/CPU i guess
         self.cpuLastRead = 0xFFFFF
         self.cpuLastWrite = 0xFFFFF
@@ -15,8 +16,7 @@ class dmrambus:
         self.ppuInterrupt = False
         
         self.isVertical = isVertical
-        
-        # for PPU RW logic
+
         self.readHooks = []
         self.writeHooks = []
         
@@ -41,7 +41,6 @@ class dmrambus:
         fixAddy = self.getMemAddyCPU(address)
         self.cpuLastRead = fixAddy
 
-        # skibidi callback
         for f in self.readHooks:
             v = f(fixAddy)
             if v is not None:
@@ -77,7 +76,6 @@ class dmrambus:
         if fixAddy == 0x2006:
             # for double address writes
             self.ppuintlAddrHigh = (not self.ppuintlAddrHigh)
-
         
     # address mirroring logic for PPU
     def getMemAddyPPU(self, address):
@@ -99,7 +97,7 @@ class dmrambus:
                 offset = address & 0x3FF
                 quartile = (address - 0x2000) // 0x400
                 newAddress = offset + ((quartile // 2) * 0x400)
-                return self.ppuNameTableMemory, newAddress # use struct for dynamic ppu/mainmem switch
+                return self.ppuNameTableMemory, newAddress
         return self.ppumem, address
         
     def memoryReadPPU(self, address, end = None):
