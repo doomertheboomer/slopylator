@@ -8,6 +8,37 @@ bgColors = [
     (0, 0, 255)
 ]
 
+spriteColors = [
+    # Palette 0
+    [
+        None,
+        (255, 0, 0),
+        (200, 0, 0),
+        (150, 0, 0),
+    ],
+
+    [
+        None,
+        (0, 255, 0),
+        (0, 200, 0),
+        (0, 150, 0),
+    ],
+
+    [
+        None,
+        (0, 0, 255),
+        (0, 0, 200),
+        (0, 0, 150),
+    ],
+
+    [
+        None,
+        (255, 255, 0),
+        (200, 200, 0),
+        (150, 150, 0),
+    ],
+]
+
 class dmppu:
     def __init__(self, rambus, loglevel = 3):
         self.window = dmslopywindow()
@@ -213,6 +244,8 @@ class dmppu:
 
         # RENDER YOUR GAME HERE
         self.renderBackground()
+        self.renderSprites()
+        
         # flip() the display to put your work on screen
         pygame.display.flip()
         self.lastFrame = time.time() # this line HAS to be last
@@ -272,6 +305,37 @@ class dmppu:
                         screen_x += 1
 
                     screen_y += 1
+                     
+    def renderSprites(self):
+        pattern_table = self.patternTable[int(self.ctrlFlagGet('s'))]
+
+        # oam fits 64 sprites (256 bytes / 4 bytes per sprite)
+        for i in range(64):
+            base = i * 4
+
+            # sprite object
+            # back in MY DAY we did OOP manually in assembly
+            sprite_y = self.oam[base + 0]
+            tile_index = self.oam[base + 1]
+            attr = self.oam[base + 2]
+            sprite_x = self.oam[base + 3]
+            palette_id = attr & 0b00000011
+
+            # sprite to render
+            tile = pattern_table[tile_index]
+
+            screen_y = sprite_y
+            for row in tile:
+                screen_x = sprite_x
+
+                for pixel in row:
+                    if pixel != 0:
+                        color = spriteColors[palette_id][pixel]
+                        self.window.screen.set_at((screen_x, screen_y), color)
+                    screen_x += 1
+
+                screen_y += 1
+
                                         
     def fetch(self):
         # frame timing stuff
