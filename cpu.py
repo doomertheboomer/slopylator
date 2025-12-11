@@ -273,6 +273,7 @@ class dm6502:
         # 7 6 5 4 3 2 1 0
         # N V x B D I Z C
         if flag[0] in self.__srFlags:
+            # print(f"set {flag} to {enable}") # TEMP
             mask = 1 << self.__srFlags[flag[0]]
             if enable:
                 self.sr |= mask
@@ -624,12 +625,14 @@ class dm6502:
         self.srFlagSet('v', False)
         
     # CMP: Compare Memory with Accumulator
-    def __cmp(self, memory, register = 0):
+    def __cmp(self, memory, register = None):
         self.log(f"cmp {memory}", 5) # TODO: fix instruction name print for cpx and cpy
         # for other cmps
-        if (register == 0):
+        if (register == None):
             register = self.a
+        
         result = (register - memory) & 0xFF # no idea if this should wraparound or not
+        
         # set flags
         self.srFlagSet('c', register >= memory)
         self.srFlagSet('z', register == memory)
@@ -1229,7 +1232,7 @@ class dm6502:
         result = self.a - memory - int(not self.srFlagGet('c'))
         
         # weird flagset
-        self.srFlagSet('c', bool(result >= 0)) # ~(result < $00)
+        self.srFlagSet('c', bool(result >= 0)) # ~(result < $00) but its unsigned here
         
         # do 8bit wrap to val and do rest of flags
         self.a = result & 0xFF
