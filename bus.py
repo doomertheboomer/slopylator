@@ -2,7 +2,7 @@ class dmrambus:
     def __init__(self, isVertical):
         # up to 0x10000 for both cpu and ppu
         self.cpumem = [0] * 0x10000
-        self.ppumem = [0] * 0x3FFF
+        self.ppumem = [0] * 0x4000
 
         self.ppuNameTableMemory = [0] * 0xffff
         
@@ -79,6 +79,7 @@ class dmrambus:
         
     # address mirroring logic for PPU
     def getMemAddyPPU(self, address):
+        address &= 0x3FFF
         if address >= 0 and address <= 0x1FFF:
             return self.ppumem, address
                 
@@ -113,4 +114,5 @@ class dmrambus:
     
     def memoryWritePPU(self, address, value):
         data, addr = self.getMemAddyPPU(address)
+        # print(hex(addr))
         data[addr] = value

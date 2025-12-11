@@ -279,7 +279,7 @@ class dmppu:
         self.patternTable = patternTable
 
     def renderBackground(self):
-        nametable_start = 0x2000 # TODO: change this dynamically with ppu flags
+        nametable_start = 0x2000 + (self.ctrl & 0b11) * 0x400 # change this dynamically with ppu flags
 
         # Draw 32x30 tiles
         for y in range(30):
