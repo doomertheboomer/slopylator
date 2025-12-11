@@ -331,7 +331,7 @@ class dm6502:
         
         # AN INDIRECT JUMP MUST NEVER USE A VECTOR BEGINNING ON THE LAST BYTE OF A PAGE (6502 jmpbug)
         address = (hibyte << 8) | lobyte # ccbb
-        if (address & 0xFF == 0xFF):
+        if (lobyte == 0xFF):
             self.log("jmpbug acquired!", 5)
             lobyte2 = self.rambus.memoryReadCPU(address) & 0xFF # xx
             hibyte2 = self.rambus.memoryReadCPU((address) & 0xFF00) # wraparound to page start
@@ -354,17 +354,18 @@ class dm6502:
     def __adc(self, amount):
         self.log(f"adc {amount}", 5)
         orig_a = self.a
-        self.a += amount + int(self.srFlagGet('c'))
+        # self.a += amount + int(self.srFlagGet('c'))
+        result = self.a + amount + int(self.srFlagGet('c'))
     
         # set c flag and correct value
-        self.srFlagSet('c', self.a > 255)
-        self.a &= 0xFF
+        self.srFlagSet('c', result > 255)
+        self.a = result & 0xFF
     
-        # set n flag
-        self.srFlagSet('n', bool((self.a >> 7) & 1))
-        
         # set z flag
         self.srFlagSet('z', self.a == 0)
+        
+        # set n flag
+        self.srFlagSet('n', bool((self.a >> 7) & 1))
     
         # set v flag
         v = ((orig_a ^ self.a) & (amount ^ self.a) & 0x80) != 0

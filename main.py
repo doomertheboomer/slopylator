@@ -53,7 +53,7 @@ bus.isVertical = isVertical
 ppu.buildPatternTable()
 print(f"CHR ROM and mirror data loaded into PPU")
 
-input("Press ENTER to start emulation!")
+# input("Press ENTER to start emulation!")
 
 breakpoints = []
 stepping = False
@@ -74,7 +74,7 @@ while True:
         # this needs to be nested
         if ppu.ctrlFlagGet('v'):
             # stepping = True
-            print("NMI enable")
+            # print("NMI enable")
             cpu.interrupt(0xFFFA)
         bus.ppuInterrupt = False
     cpu.fetch()
