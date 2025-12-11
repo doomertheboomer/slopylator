@@ -36,7 +36,7 @@ if prgRom == 1:
 chr = romfile[chrStart:chrStart+8192] # best if i limit this for sanity
 
 bus = dmrambus(isVertical)
-cpu = dm6502(bus, 0) # has ram mirrored by bus
+cpu = dm6502(bus, 5) # has ram mirrored by bus
 ppu = dmppu(bus, 5) # has its own ram too
 pad = dmjoypad(bus)
 
@@ -45,6 +45,7 @@ bus.cpumem[0x8000:0x10000] = prg
 cpu.pc = cpu.getIndirectAddress([0xfc, 0xff]) # needs to point to reset vector
 if filename == "testrom":
     cpu.pc = 0xC000
+    cpu.testmode = True
 print(f"Program ROM loaded with entrypoint {hex(cpu.pc)}")
 
 # TODO: load chrrom into ppu
@@ -57,6 +58,14 @@ print(f"CHR ROM and mirror data loaded into PPU")
 
 breakpoints = []
 stepping = False
+
+# testcase generator
+if cpu.testmode:
+    log = open("testoutput.txt", "w")
+    log.write("")
+    log = open("testoutput.txt", "a")
+    lines = []
+
 # main loop
 cpuCyclesOld = 0
 while True:
@@ -77,6 +86,10 @@ while True:
             # print("NMI enable")
             cpu.interrupt(0xFFFA)
         bus.ppuInterrupt = False
+        
+    if cpu.testmode:
+        log.write(f"{cpu.pc:04X} {cpu.a:02X} {cpu.x:02X} {cpu.y:02X} {cpu.sp:02X}\n")
+        
     cpu.fetch()
     
     # ppu is 3x faster than cpu

@@ -219,3 +219,5 @@ __marimo__/
 fceux/
 *.deb
 *.rs
+
+testoutput.txt

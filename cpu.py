@@ -2,6 +2,7 @@ class dm6502:
     def __init__(self, rambus, loglevel = 3):
         self.loglevel = loglevel
         self.loglevels = ["[fatal]", "[error]", "[warn] ", "[info] ", "[debug]", "[trace]"]
+        self.testmode = False
         
         # general purpose registers
         self.a = 0  # accumulator
