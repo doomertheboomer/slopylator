@@ -1207,7 +1207,7 @@ class dm6502:
     
     # RTI: Return from Interrupt
     def __rti(self, params):
-        flags = (self.stackPull()) & 0b11001111 # 2 flags are ignored
+        flags = (self.stackPull()) | 0b00100000 # 1 flag is force set again
         lobyte = self.stackPull()
         hibyte = self.stackPull()
         
