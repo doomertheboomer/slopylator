@@ -36,7 +36,7 @@ if prgRom == 1:
 chr = romfile[chrStart:chrStart+8192] # best if i limit this for sanity
 
 bus = dmrambus(isVertical)
-cpu = dm6502(bus, 5) # has ram mirrored by bus
+cpu = dm6502(bus, 0) # has ram mirrored by bus
 ppu = dmppu(bus, 5) # has its own ram too
 pad = dmjoypad(bus)
 

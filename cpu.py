@@ -11,7 +11,7 @@ class dm6502:
         # special registers
         self.pc = 0x0000 # program counter
         self.sp = 0xFD # stack pointer
-        self.sr = 0b00110100 # status register
+        self.sr = 0b00100100 # status register
         self.__srFlags = {
             'n': 7,
             'v': 6,
@@ -1104,9 +1104,7 @@ class dm6502:
     # PLP: Pull Processor Status from Stack
     def __plp(self, params):
         # TODO: interrupt disable delayed 1 instruction
-        old = (self.sr & 0b00110000) # save only 2 old bits
-        self.sr = self.stackPull() # set the status register
-        self.sr |= old # restore old bits
+        self.sr = (self.stackPull() & 0b11001111) | 0b00100000 # restore old bits and force 1 bit to 1
         self.log(f"plp {self.sr}", 5)
         
     # ROL: Rotate One Bit Left (Memory or Accumulator)
@@ -1228,13 +1226,13 @@ class dm6502:
     def __sbc(self, memory):
         # initial operation
         oldA = self.a
-        self.a = self.a + ~memory + int(self.srFlagGet('c'))
+        result = self.a - memory - int(not self.srFlagGet('c'))
         
         # weird flagset
-        self.srFlagSet('c', bool(~(self.a < 0))) # ~(result < $00)
+        self.srFlagSet('c', bool(result >= 0)) # ~(result < $00)
         
         # do 8bit wrap to val and do rest of flags
-        self.a &= 0xFF
+        self.a = result & 0xFF
         self.srFlagSet('v', bool((self.a ^ oldA) & (self.a ^ ~memory) & 0x80)) # (result ^ A) & (result ^ ~memory) & $80
         self.srFlagSet('z', self.a == 0) # result == 0
         self.srFlagSet('n', bool((self.a >> 7) & 1))

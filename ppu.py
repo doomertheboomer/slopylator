@@ -9,7 +9,6 @@ bgColors = [
 ]
 
 spriteColors = [
-    # Palette 0
     [
         None,
         (255, 0, 0),
