@@ -631,8 +631,8 @@ class dm6502:
             register = self.a
         result = (register - memory) & 0xFF # no idea if this should wraparound or not
         # set flags
-        self.srFlagSet('c', self.a >= memory)
-        self.srFlagSet('z', self.a == memory)
+        self.srFlagSet('c', register >= memory)
+        self.srFlagSet('z', register == memory)
         self.srFlagSet('n', bool((result >> 7) & 1))
     
     # immediate

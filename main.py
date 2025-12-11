@@ -88,7 +88,7 @@ while True:
         bus.ppuInterrupt = False
         
     if cpu.testmode:
-        log.write(f"{cpu.pc:04X} {cpu.a:02X} {cpu.x:02X} {cpu.y:02X} {cpu.sp:02X}\n")
+        log.write(f"{cpu.pc:04X} {cpu.a:02X} {cpu.x:02X} {cpu.y:02X} {cpu.sp:02X} {cpu.sr:08b}\n")
         
     cpu.fetch()
     
