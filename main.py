@@ -74,7 +74,7 @@ while True:
         # this needs to be nested
         if ppu.ctrlFlagGet('v'):
             # stepping = True
-            # print("NMI enable")
+            print("NMI enable")
             cpu.interrupt(0xFFFA)
         bus.ppuInterrupt = False
     cpu.fetch()
