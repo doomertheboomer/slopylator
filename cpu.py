@@ -568,13 +568,16 @@ class dm6502:
         if self.srFlagGet('n') == False:
             self.__branch(params[0]) # function size will be added to pc after exec
     
-    def interrupt(self, handler):
+    def interrupt(self, handler, isBrk = False):
         # push ret ptr to stack
         hibyte = (self.pc >> 8) & 0xFF
         lobyte = self.pc & 0xFF
         
-        # push flags (with 2 bits always set to 1) to stack
-        flagPush = self.sr | 0b00110000
+        # brk sets the B flag to true
+        if isBrk:
+            flagPush = self.sr | 0b00010000
+        else:
+            flagPush = self.sr & 0b11101111
         
         self.stackPush(hibyte)
         self.stackPush(lobyte)
@@ -590,7 +593,7 @@ class dm6502:
     
     # BRK: Force Break
     def __brk(self, params):
-        self.interrupt(0xFFFE)
+        self.interrupt(0xFFFE, True)
     
     # BVC: Branch on Overflow Clear
     def __bvc(self, params):
@@ -1107,7 +1110,8 @@ class dm6502:
     # PLP: Pull Processor Status from Stack
     def __plp(self, params):
         # TODO: interrupt disable delayed 1 instruction
-        self.sr = (self.stackPull() & 0b11001111) | 0b00100000 # restore old bits and force 1 bit to 1
+        old = (self.sr & 0b00110000) # save only 2 old bits
+        self.sr = (self.stackPull() & 0b11001111) | old # set the status register
         self.log(f"plp {self.sr}", 5)
         
     # ROL: Rotate One Bit Left (Memory or Accumulator)
@@ -1207,12 +1211,14 @@ class dm6502:
     
     # RTI: Return from Interrupt
     def __rti(self, params):
-        flags = (self.stackPull()) | 0b00100000 # 1 flag is force set again
+        old = (self.sr & 0b00110000) # save only 2 old bits
+        
+        flags = (self.stackPull()) & 0b11001111 # 2 flags are ignored
         lobyte = self.stackPull()
         hibyte = self.stackPull()
         
         # set the stuff
-        self.sr |= flags
+        self.sr = flags | old
         # self.pc = (lobyte & 0xFF) | ((hibyte << 8) & 0xFF)
         self.pc = (((lobyte & 0xFF) | (hibyte << 8)) - 1) & 0xFFFF # limit to 16 bit address space
         self.log(f"rti {self.pc}", 5)
