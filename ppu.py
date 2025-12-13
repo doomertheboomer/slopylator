@@ -73,11 +73,12 @@ class dmppu:
         
         # readregisters
         self.ctrl = self.rambus.cpumem[0x2000] # done
-        self.mask = self.rambus.cpumem[0x2001]
-        self.status = self.rambus.cpumem[0x2002]
+        self.mask = self.rambus.cpumem[0x2001] # done
+        self.status = self.rambus.cpumem[0x2002] # done
         self.oamaddr = self.rambus.cpumem[0x2003] # done
         self.oamdata = self.rambus.cpumem[0x2004] # done
-        self.scroll = self.rambus.cpumem[0x2005]
+        self.scrollx = self.rambus.cpumem[0x2005] # done
+        self.scrolly = self.rambus.cpumem[0x2005] # done
         self.addr = self.rambus.cpumem[0x2006] # done
         self.data = self.rambus.cpumem[0x2007] # done
         self.oamdma = self.rambus.cpumem[0x4014] # done
@@ -208,8 +209,10 @@ class dmppu:
             self.oamaddr = (self.oamaddr + 1) & 0xFF
             return True
         if address == 0x2005:
-            self.scroll = value
-
+            if self.secondWrite:
+                self.scrolly = value
+            else:
+                self.scrollx = value
             self.secondWrite = not self.secondWrite
             return True
         if address == 0x2006:
@@ -285,11 +288,13 @@ class dmppu:
 
     def renderBackground(self):
         nametable_start = 0x2000 + (self.ctrl & 0b11) * 0x400 # change this dynamically with ppu flags
+        
+        nt_x = self.ctrlFlagGet('n0')
+        nt_y = self.ctrlFlagGet('n1')
 
         # Draw 32x30 tiles
         for y in range(30):
             for x in range(32):
-
                 # tile index from nametable
                 address = nametable_start + y * 32 + x # base + y offset + x offset (like a 2d array access)
                 tile_index = self.rambus.memoryReadPPU(address)
@@ -299,9 +304,9 @@ class dmppu:
                 
                 # iterate per pixel for drawing
                 # 8*8 pixel tiles
-                screen_y = y * 8
+                screen_y = (y * 8) - self.scrolly
                 for row in name:
-                    screen_x = x * 8
+                    screen_x = (x * 8) - self.scrollx
 
                     for pixel in row:
                         color = bgColors[pixel] # faster to hardcode 4 colors than indexing attribute table
@@ -325,13 +330,23 @@ class dmppu:
             attr = self.oam[base + 2]
             sprite_x = self.oam[base + 3]
             palette_id = attr & 0b00000011
+            flip_x = bool(attr & 0b01000000) # bit six
+            flip_y = bool(attr & 0b10000000) # bit SEVENNNNNNN
 
             # sprite to render
             tile = pattern_table[tile_index]
+            
+            # reverse order if flip
+            if (flip_y):
+                tile = tile[::-1]
 
             screen_y = sprite_y
             for row in tile:
                 screen_x = sprite_x
+                
+                # reverse order if flip
+                if (flip_x):
+                    row = row[::-1]
 
                 for pixel in row:
                     if pixel != 0:
