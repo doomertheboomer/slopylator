@@ -176,7 +176,7 @@ class dmppu:
         if address == 0x2006:
             return self.addr
         if address == 0x2007:
-            print(f"vram read {hex(self.intlAddr)}")
+            # print(f"vram read {hex(self.intlAddr)}")
 
             # directly read from vram for palette data
             if (self.intlAddr >= 0x3F00) and (self.intlAddr <= 0x3FFF):
@@ -356,7 +356,7 @@ class dmppu:
             except:
                 pass
             self.renderFrame()
-            print(f"frame rendered {1/delta} fps")
+            # print(f"frame rendered {1/delta} fps")
             # print(self.oam)
         
         self.cycles += 1

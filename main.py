@@ -33,7 +33,7 @@ prg = romfile[prgStart:chrStart]
 if prgRom == 1:
     prg += prg # mirroring if only 1 rom
 
-chr = romfile[chrStart:chrStart+8192] # best if i limit this for sanity
+chr = romfile[chrStart:] # best if i limit this for sanity
 
 bus = dmrambus(isVertical)
 cpu = dm6502(bus, 0) # has ram mirrored by bus
@@ -49,7 +49,7 @@ if filename == "testrom":
 print(f"Program ROM loaded with entrypoint {hex(cpu.pc)}")
 
 # TODO: load chrrom into ppu
-bus.ppumem[0x0:0x2000] = chr
+bus.ppumem[0x0:0x2000] = chr[0x0:0x2000]
 bus.isVertical = isVertical
 ppu.buildPatternTable()
 print(f"CHR ROM and mirror data loaded into PPU")
