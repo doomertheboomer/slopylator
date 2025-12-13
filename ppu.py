@@ -239,11 +239,17 @@ class dmppu:
             # print(event)
             pass
         
-        self.window.screen.fill(0x400000) # blood red for the blood sweat and tears going into ts
+        self.window.framebuffer.fill(0x400000) # blood red for the blood sweat and tears going into ts
 
         # RENDER YOUR GAME HERE
         self.renderBackground()
         self.renderSprites()
+        
+        scaled = pygame.transform.scale(
+            self.window.framebuffer, self.window.screen.get_size()
+        )
+
+        self.window.screen.blit(scaled, (0, 0))
         
         # flip() the display to put your work on screen
         pygame.display.flip()
@@ -300,7 +306,7 @@ class dmppu:
                     for pixel in row:
                         color = bgColors[pixel] # faster to hardcode 4 colors than indexing attribute table
 
-                        self.window.screen.set_at((screen_x, screen_y), color)
+                        self.window.framebuffer.set_at((screen_x, screen_y), color)
                         screen_x += 1
 
                     screen_y += 1
@@ -330,7 +336,7 @@ class dmppu:
                 for pixel in row:
                     if pixel != 0:
                         color = spriteColors[palette_id][pixel]
-                        self.window.screen.set_at((screen_x, screen_y), color)
+                        self.window.framebuffer.set_at((screen_x, screen_y), color)
                     screen_x += 1
 
                 screen_y += 1
