@@ -288,9 +288,6 @@ class dmppu:
 
     def renderBackground(self):
         nametable_start = 0x2000 + (self.ctrl & 0b11) * 0x400 # change this dynamically with ppu flags
-        
-        nt_x = self.ctrlFlagGet('n0')
-        nt_y = self.ctrlFlagGet('n1')
 
         # Draw 32x30 tiles
         for y in range(30):
