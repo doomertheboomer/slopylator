@@ -287,31 +287,52 @@ class dmppu:
         self.patternTable = patternTable
 
     def renderBackground(self):
-        nametable_start = 0x2000 + (self.ctrl & 0b11) * 0x400 # change this dynamically with ppu flags
-
-        # Draw 32x30 tiles
+        # put these here for performance (dont loop this 30*32 times)
+        base_nt = self.ctrl & 0b11
+        pattern = self.patternTable[int(self.ctrlFlagGet('b'))]
+        
         for y in range(30):
             for x in range(32):
+                
+                # apply scroll vars to renderer
+                fixed_x = x * 8 + self.scrollx
+                fixed_y = y * 8 + self.scrolly
+                
+                # find nametable to render
+                nt_x = (fixed_x // 256) & 1
+                nt_y = (fixed_y // 240) & 1
+                
+                nametable = base_nt ^ (nt_x | (nt_y << 1))
+                base = 0x2000 + nametable * 0x400
+                
+                # fix tile coords
+                tile_x = (fixed_x // 8) & 31
+                tile_y = (fixed_y // 8) % 30
+                
+                # old logic
                 # tile index from nametable
-                address = nametable_start + y * 32 + x # base + y offset + x offset (like a 2d array access)
+                address = base + tile_y * 32 + tile_x # base + y offset + x offset (like a 2d array access)
                 tile_index = self.rambus.memoryReadPPU(address)
-
+                
                 # select pattern table
-                name = self.patternTable[int(self.ctrlFlagGet('b'))][tile_index]
+                tile = pattern[tile_index]
                 
                 # iterate per pixel for drawing
                 # 8*8 pixel tiles
-                screen_y = (y * 8) - self.scrolly
-                for row in name:
-                    screen_x = (x * 8) - self.scrollx
-
+                screen_y = y * 8
+                for row in tile:
+                    screen_x = x * 8
+                    
                     for pixel in row:
-                        color = bgColors[pixel] # faster to hardcode 4 colors than indexing attribute table
-
-                        self.window.framebuffer.set_at((screen_x, screen_y), color)
+                        # check if pixel is inside the screen
+                        if 0 <= screen_x < 256 and 0 <= screen_y < 240:
+                            color = bgColors[pixel] # faster to hardcode 4 colors than indexing attribute table
+                            
+                            self.window.framebuffer.set_at((screen_x, screen_y), color)
                         screen_x += 1
-
+                        
                     screen_y += 1
+
                      
     def renderSprites(self):
         pattern_table = self.patternTable[int(self.ctrlFlagGet('s'))]
