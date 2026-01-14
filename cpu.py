@@ -1433,6 +1433,6 @@ class dm6502:
         
     def __tst(self, params):
         if self.testmode:
-            print("Test complete. Please compare the output with the expected output.")
+            print("Test complete. Please compare the output with the expected output at testcase.txt.")
             while (True):
                 pass
