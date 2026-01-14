@@ -1,3 +1,5 @@
+import sys
+
 class dm6502:
     def __init__(self, rambus, loglevel = 3):
         self.loglevel = loglevel
@@ -1433,6 +1435,26 @@ class dm6502:
         
     def __tst(self, params):
         if self.testmode:
-            print("Test complete. Please compare the output with the expected output at testcase.txt.")
-            while (True):
-                pass
+            # print("Test complete. Please compare the output with the expected output at testcase.txt.")
+            with open("testcase.txt", "r") as tc:
+                expected = tc.readlines()
+            with open("testoutput.txt", "r") as to:
+                result = to.readlines()
+            # it should exit here if anything is bad
+            try:
+                for i in range(len(expected)):
+                    if expected[i] != result[i]:
+                        self.__endtst(False, i + 1)
+            except Exception as e:
+                print(e)
+                self.__endtst(False, len(result) + 1)
+                
+            # if nothing is bad then it goes here
+            self.__endtst(True)
+                
+    def __endtst(self, success = False, line = None):
+        if success:
+            print("Test succeeded. CPU is working properly.")
+        else:
+            print(f"Test failed at line {line}. Please check testoutput.txt and compare it with testcase.txt.")
+        sys.exit(0)

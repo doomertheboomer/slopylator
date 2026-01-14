@@ -68,8 +68,7 @@ stepping = False
 if cpu.testmode:
     log = open("testoutput.txt", "w")
     log.write("")
-    log = open("testoutput.txt", "a")
-    lines = []
+    print("Beginning CPU sanity check. If this takes more than a couple seconds, the CPU isn't working properly!")
 
 # main loop
 cpuCyclesOld = 0
@@ -93,7 +92,9 @@ while True:
         bus.ppuInterrupt = False
         
     if cpu.testmode:
-        log.write(f"{cpu.pc:04X} {cpu.a:02X} {cpu.x:02X} {cpu.y:02X} {cpu.sp:02X} {cpu.sr:08b}\n")
+        # slow and steady wins the race it seems
+        with open("testoutput.txt", "a") as file:
+            file.write(f"{cpu.pc:04X} {cpu.a:02X} {cpu.x:02X} {cpu.y:02X} {cpu.sp:02X} {cpu.sr:08b}\n")
         
     cpu.fetch()
     
