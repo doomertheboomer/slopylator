@@ -219,6 +219,8 @@ class dm6502:
             0x8A: [self.__txa,   1, 2, 0],
             0x9A: [self.__txs,   1, 2, 0],
             0x98: [self.__tya,   1, 2, 0],
+            
+            0x04: [self.__tst,   1, 1, 0]
         }
         
         self.log("6502 CPU initialized", 3)
@@ -1428,3 +1430,9 @@ class dm6502:
         self.srFlagSet('z', self.y == 0)
         self.srFlagSet('n', bool((self.y >> 7) & 1))
         self.log(f"tya {self.y}", 5)
+        
+    def __tst(self, params):
+        if self.testmode:
+            print("Test complete. Please compare the output with the expected output.")
+            while (True):
+                pass

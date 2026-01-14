@@ -16,6 +16,11 @@ else:
 # load the rom
 with open(filename, "rb") as file:
     romfile = list(file.read())
+    
+header = romfile[0:4]
+if not (header == [78, 69, 83, 26]):
+    raise FileNotFoundError("The file is not an iNES file")
+    
 prgRom = romfile[4] # number of code banks (*16kb)
 chrRom = romfile[5] # number of graphics banks (*8kb)
 
