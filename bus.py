@@ -47,11 +47,11 @@ class dmrambus:
                 return v
         
         # handle weird PPU edge cases (prepare for yandev quality code)
-        if fixAddy == 0x2002:
-            self.ppuintlAddrHigh = False
-        elif fixAddy == 0x2006:
-            # for double address reads
-            self.ppuintlAddrHigh = (not self.ppuintlAddrHigh)
+        # if fixAddy == 0x2002:
+        #     self.ppuintlAddrHigh = False
+        # elif fixAddy == 0x2006:
+        #     # for double address reads
+        #     self.ppuintlAddrHigh = (not self.ppuintlAddrHigh)
         
         if end != None:
             retVal = []
@@ -73,9 +73,9 @@ class dmrambus:
         self.cpumem[fixAddy] = value
         
         # handle weird PPU edge cases (prepare for yandev quality code)
-        if fixAddy == 0x2006:
-            # for double address writes
-            self.ppuintlAddrHigh = (not self.ppuintlAddrHigh)
+        # if fixAddy == 0x2006:
+        #     # for double address writes
+        #     self.ppuintlAddrHigh = (not self.ppuintlAddrHigh)
         
     # address mirroring logic for PPU
     def getMemAddyPPU(self, address):

@@ -53,7 +53,7 @@ if filename == "testrom":
     cpu.testmode = True
 print(f"Program ROM loaded with entrypoint {hex(cpu.pc)}")
 
-# TODO: load chrrom into ppu
+# load chrrom into ppu
 bus.ppumem[0x0:0x2000] = chr[0x0:0x2000]
 bus.isVertical = isVertical
 ppu.buildPatternTable()
@@ -66,6 +66,7 @@ stepping = False
 
 # testcase generator
 if cpu.testmode:
+    cpu.loglevel = 5
     log = open("testoutput.txt", "w")
     log.write("")
     print("Beginning CPU sanity check. If this takes more than a couple seconds, the CPU isn't working properly!")
