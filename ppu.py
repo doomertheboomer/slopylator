@@ -108,7 +108,7 @@ class dmppu:
             'o': 5,
             's': 6,
             'v': 7
-        }    
+        }
     
     def ctrlFlagGet(self, flag):
         # return an int for this

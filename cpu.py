@@ -1,5 +1,4 @@
 import sys
-
 class dm6502:
     def __init__(self, rambus, loglevel = 3):
         self.loglevel = loglevel
@@ -229,7 +228,7 @@ class dm6502:
         pass
     
     def printStack(self):
-        stack = self.rambus.memory[0x100:0x200]
+        stack = self.rambus.cpumem[0x100:0x200]
         for i in range(0xFF):
             print(f"{hex(i)} {hex(stack[i])}")
     
